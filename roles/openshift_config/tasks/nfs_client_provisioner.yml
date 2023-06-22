@@ -1,0 +1,21 @@
+---
+# This deploys and configures the NFS external storage provisioner from here:
+# https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
+- name: Deploy nfs-client-provisioner
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'nfs_client_provisioner/' + item) | from_yaml }}"
+  tags:
+  - nfs-provisioner
+  loop:
+  - namespace.yaml.j2
+  - serviceaccount.yaml.j2
+  - clusterrole.yaml.j2
+  - clusterrolebinding.yaml.j2
+  - role.yaml.j2
+  - rolebinding.yaml.j2
+  - scc.yaml.j2
+  - deployment.yaml.j2
+  - class.yaml.j2
+

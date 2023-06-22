@@ -1,0 +1,5 @@
+- name: Ensure git assets  and patches directory exist
+  file:
+    path: "{{ openshift_gitops_dir }}/{{ gitops_component }}/{{ item }}"
+    state: directory
+  loop: "{{ ['assets', 'patches'] + (extra_dirs | default([])) }}"

@@ -1,0 +1,46 @@
+# This is all without all the nice OBC work done by other people in the old
+# version,that's because upstream does not yet have proper objectBucketClaim
+# support, and refuse to use the internal s3.openhishift-storage.svc endpoint
+# since they don't trust the service CA by default.COmbine this with other
+# irritations, and you can manually add an overlay to the gitops repo for your
+# storage if you want.
+#
+# I hope to revisit this in the future when upstream finally realizes not
+# everybody runs everything on AWS.
+#
+- name: Ensure apiserver directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: registry
+
+- name: Create Storage PVC if defined
+  template:
+    src: registry/storage-pvc.yml.j2
+    dest: "{{ openshift_gitops_dir }}/registry/assets/storage-pvc.yaml"
+  when:
+  - registry_storage_claim_name is defined
+
+- name: Create Storage patch
+  template:
+    src: registry/storage-patch.yml.j2
+    dest: "{{ openshift_gitops_dir }}/registry/patches/storage-patch.yaml"
+  when:
+  - registry_storage_claim_name is defined
+
+- name: Create nodeSelector Patch
+  template:
+    src: registry/nodeselector-patch.yml.j2
+    dest: "{{ openshift_gitops_dir }}/registry/patches/nodeselector-patch.yaml"
+
+
+- name: Create Replicas Patch
+  template:
+    src: registry/replicas-patch.yml.j2
+    dest: "{{ openshift_gitops_dir }}/registry/patches/replicas-patch.yaml"
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: registry

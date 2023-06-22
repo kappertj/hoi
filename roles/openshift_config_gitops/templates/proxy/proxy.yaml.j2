@@ -1,0 +1,23 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: config.openshift.io/v1
+kind: Proxy
+metadata:
+  name: cluster
+spec:
+  {% if http_proxy is defined %}
+  httpProxy: {{ http_proxy }}
+  {% endif %}
+  {% if https_proxy is defined %}
+  httpsProxy: {{ https_proxy }}
+  {% endif %}
+  {% if no_proxy is defined %}
+  noProxy: {{ no_proxy }} 
+  {% endif %}
+  {% if proxy_readiness_endpoints is defined %}
+  readinessEndpoints:
+  {% for endpoint in proxy_readiness_endpoints %}
+  - {{ endpoint }}
+  {% endfor %}
+  {% endif %}
+  trustedCA:
+    name: "user-ca-bundle"

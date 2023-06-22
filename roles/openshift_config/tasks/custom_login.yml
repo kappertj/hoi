@@ -1,0 +1,16 @@
+- name: Configure Custom Login Screen Templates
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    definition: "{{ lookup('template', 'custom_login/template-secret.yml.j2') | from_yaml }}"
+  loop:
+  - name: login-template
+    filename: login.html
+  - name: providers-template
+    filename: providers.html
+  - name: error-template
+    filename: errors.html
+
+- name: Configure Custom Login Screen 
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    definition: "{{ lookup('template', 'custom_login/oauths-cluster.yml.j2') | from_yaml }}"

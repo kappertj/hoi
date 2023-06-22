@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- {{ openshift_gitops_upstream_base }}/apiserver
+{% for file in apiserver_asset_files.files %}
+- {{ file.path | replace(openshift_gitops_dir + '/apiserver/', '') }} 
+{% endfor %}
+
+patchesStrategicMerge:
+{% if etcd_encryption %}
+- |
+  apiVersion: config.openshift.io/v1
+  kind: APIServer
+  metadata:
+    name: cluster
+  spec:
+    encryption:
+      type: aescbc
+{% endif %}
+{% if apiserver_certificate is defined %}
+- |
+  apiVersion: config.openshift.io/v1
+  kind: APIServer
+  metadata:
+    name: cluster
+  spec:
+    servingCerts:
+      namedCertificates:
+      - servingCertificate:
+          name: {{ apiserver_certificate.name }}
+        names:
+        - api.{{ cluster }}.{{ base_domain }}
+{% endif %}

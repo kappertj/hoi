@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ldap-ca-config
+  namespace: "{{ groupsync_cronjob_namespace }}"
+  labels:
+    template: "cronjob-ldap-group-sync"
+data:
+  ldap-ca.pem: | 
+    {{ groupsync_ldap_ca_file_contents.content| b64decode | indent(width=4) }}

@@ -1,0 +1,39 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: "loki.grafana.com/v1"
+kind: "LokiStack"
+metadata:
+  name: "lokistack-cluster"
+  namespace: "openshift-logging"
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "9"
+spec:
+  {% if loki_retention is defined %}
+  limits:
+    global:
+      retention:
+        days: {{ loki_retention }}
+  {% endif %}
+  size: {{ loki_size | default('1x.extra-small') }}
+  storage:
+    schemas:
+      - version: v12
+        effectiveDate: "2022-06-01"
+    secret:
+      name: logging-loki-s3
+      type: s3
+    tls:
+      caName: cluster-ca-bundle
+      caKey: service-ca.crt
+  storageClassName: {{ loki_storageclass | default('odf-storagecluster-cephfs') }}
+  tenants:
+    mode: openshift-logging
+{% if groups['infra'] | default([]) | length > 0 %}
+  template:
+  {% for loki_component in ['compactor', 'distributor', 'gateway', 'indexGateway', 'ingester', 'querier', 'queryFrontend', 'ruler'] %}
+    {{ loki_component }}:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ''
+  {% endfor %}
+{% endif %}
+

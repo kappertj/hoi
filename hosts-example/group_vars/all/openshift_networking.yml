@@ -1,0 +1,16 @@
+#openshift_networktype: OVNKubernetes
+
+#openshift_servicenetworks:
+#- 172.30.0.0/16
+
+#openshift_clusternetworks:
+#- cidr: 10.128.0.0/16
+#  hostPrefix: 23
+
+#enable_ipsec: true
+
+#disable_multus: true
+
+#ovnkubernetes_mtu: 1400
+
+#ovnkubernetes_geneveport: 6081

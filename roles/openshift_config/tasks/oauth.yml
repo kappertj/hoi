@@ -1,0 +1,27 @@
+---
+- name: slurp CA and create
+  include_tasks: oauths_slurp_and_create_ca.yml
+  loop: "{{ oauths }}"
+
+- name: Configure oauth bind passwords
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'oauth/oauths-bindpw.yml.j2') | from_yaml }}"
+  loop: "{{ oauths }}"
+  when: item.type == 'LDAP'
+
+- name: Configure openid secrect
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'oauth/openid-connect-secret.yml.j2') | from_yaml }}"
+  loop: "{{ oauths }}"
+  when: item.type == 'OpenID'
+
+- name: Configure Authentication
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'oauth/oauths.yml.j2') | from_yaml }}"
+

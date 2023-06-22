@@ -1,0 +1,13 @@
+#jinja2: lstrip_blocks: True
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+{% if (registry_storage_supports_rwx | default(False)) and (groups['infra'] | default('[]') | length > 1) %}
+  replicas: {{ groups['infra'] | length }}
+  rolloutStrategy: RollingUpdate
+{% else %}
+  replicas: 1
+  rolloutStrategy: Recreate
+{% endif %}

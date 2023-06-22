@@ -1,0 +1,29 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ item.name }}
+  {% if item.labels is defined %}
+  labels:
+  {% for label in item.labels | dict2items %}
+    {{ label.key }}: {{ label.value }}
+  {% endfor %}
+  {% endif %}
+
+spec:
+  capacity:
+    storage: {{ item.capacity }}
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: {{ item.storageclass | default('') }}
+  iscsi:
+    targetPortal: {{ item.portal }}
+    {% if item.portals is defined %}
+    portals: {{ item.portals | to_yaml }}
+    {% endif %}
+    iqn: {{ item.iqn }}
+    {% if item.initiatorname is defined %}
+    initiatorName: {{ item.initiatorname }}
+    {% endif %}
+    lun: {{ item.lun | default('0') }}
+    fsType: {{ item.fstype | default('xfs') }}

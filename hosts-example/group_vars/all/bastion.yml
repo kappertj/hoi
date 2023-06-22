@@ -1,0 +1,3 @@
+bastion_host: bastion.example.com
+#openshift_ignition_dir: "/opt/openshift_files/{{ cluster }}/ignition"
+#openshift_installer_dir: "/opt/openshift/{{ cluster }}/installer"

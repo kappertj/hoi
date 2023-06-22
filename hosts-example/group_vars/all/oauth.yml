@@ -1,0 +1,67 @@
+oauths:
+- name: example-ipa
+  type: LDAP
+  binddn: "{{ ldap_service_dn }}"
+  bindpass: "{{ ldap_service_pass }}"
+  scheme: ldap
+  host: ipa.example.com
+  base: cn=users,cn=accounts,dc=example,dc=com
+  cafile: /etc/ipa/ca.crt
+  attributes:
+    id:
+    - uid
+    email:
+    - mail
+    name:
+    - displayName
+    preferredUsername:
+    - uid
+  groupsync: IPA
+  groupsync_groups:
+  - dn: "cn=clusteradmin,cn=groups,cn=accounts,dc=example,dc=com"
+    short: clusteradmin
+- name: example-AD
+  type: LDAP
+  binddn: "{{ ldap_service_dn }}"
+  bindpass: "{{ ldap_service_pass }}"
+  scheme: ldaps
+  host: ad.example.com
+  base: cn=users,cn=accounts,dc=example,dc=com
+  urlfilter: '?samaccountname?sub'
+  cafile: /path/to/AD/ca.crt
+  attributes:
+    id:
+    - cn
+    email:
+    - mail
+    name:
+    - description
+    preferredUsername:
+    - sAMAccountName
+  groupsync: AD
+  groupsync_groups:
+  - dn: "cn=clusteradmin,ou=groups,,dc=example,dc=com"
+    short: clusteradmin
+- name: example-openid-azure
+  type: OpenID
+  openid_clientid: "{{ encrypted_openid_clientid }}"
+  openid_issuer: "https://login.microsoftonline.com/{{ encrypted_openid_tenantid }}"
+  openid_client_secret: "{{ encrypted_openid_client_secret }}"
+  openid_tenantid: "{{ encrypted_openid_tenantid }}"
+  cafile: "/path/to/custom/ca.pem"
+  groupsync: azure
+  groupsync_groups:
+  - clusteradmin
+
+self_provisioners:
+  remove_default: True
+  users:
+  - trusted_team_member
+  - operations_manager
+  - system:serviceaccount:app-cicd:tekton
+  groups:
+  - trusted_devteam
+  - teamleads
+
+openshift_cluster_admin_groups:
+- cluster-admin

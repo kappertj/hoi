@@ -1,0 +1,27 @@
+#jinja2: lstrip_blocks: True
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+{% if gitops_component_has_upstream | default(True) %}
+- {{ openshift_gitops_upstream_base }}/{{ gitops_component }}{% if openshift_gitops_upstream_ref is defined %}?ref={{ openshift_gitops_upstream_ref }}{% endif %}
+{% endif %}
+{% for extra_base in gitops_component_extra_base_components  | default([]) %}
+- {{ openshift_gitops_upstream_base }}/{{ extra_base }}{% if openshift_gitops_upstream_ref is defined %}?ref={{ openshift_gitops_upstream_ref }}{% endif %}
+
+{% endfor %}
+
+{% for file in gitops_component_files.files %}
+- {{ file.path | replace(openshift_gitops_dir + '/' + gitops_component + '/', '') }} 
+{% endfor %}
+
+{% if gitops_component_patches_strategic.files | length > 0 %}
+patches:
+{% for file in gitops_component_patches_strategic.files %}
+- path: {{ file.path | replace(openshift_gitops_dir + '/' + gitops_component +'/', '') }} 
+{% endfor %}
+{% endif %}
+
+{% for extra_content in gitops_component_extra_content | default([]) %}
+{{ extra_content | to_yaml }}
+
+{% endfor %}

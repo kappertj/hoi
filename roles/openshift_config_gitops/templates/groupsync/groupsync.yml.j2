@@ -1,0 +1,112 @@
+#jinja2: lstrip_blocks: True
+apiVersion: redhatcop.redhat.io/v1alpha1
+kind: GroupSync
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '5'
+  name: groupsync-{{ item.name }}
+  namespace: group-sync-operator
+spec:
+  schedule: "{{ item.schedule | default ('*/5 * * * *') }}"
+  providers:
+  {% if item.groupsync == 'IPA' %}
+  - ldap:
+      credentialsSecret:
+        name: ldap-bind-password-{{ item.name }}
+        namespace: group-sync-operator
+      {% if item.cafile is defined %}
+      caSecret:
+        name: groupsync-ca-{{ item.name }}
+        namespace: group-sync-operator
+        key: ca.crt
+      {% endif %}
+      insecure: false
+      rfc2307:
+        groupMembershipAttributes:
+        - member
+        groupNameAttributes:
+        - cn
+        groupUIDAttribute: dn
+        groupsQuery:
+          baseDN: {{ item.group_base }}
+          derefAliases: never
+          filter: (objectClass=groupofnames)
+          scope: sub
+        tolerateMemberNotFoundErrors: true
+        tolerateMemberOutOfScopeErrors: true
+        userNameAttributes: {{ item.attributes.preferredUsername }}
+        userUIDAttribute: dn
+        usersQuery:
+          baseDN: {{ item.base }}
+          derefAliases: never
+          scope: sub
+        {% if item.groupsync_groups | length > 0 %}
+      groupUIDNameMapping:
+        {% for group in item.groupsync_groups %}
+        "{{ group.dn }}": {{ group.short }}
+        {% endfor %}
+      whitelist:
+        {% for group in item.groupsync_groups %}
+        - "{{ group.dn }}"
+        {% endfor %}
+      {% endif %}
+      url: {{ item.scheme | default('ldap') }}://{{ item.host }}
+    name: {{ item.name }}
+  {% endif %}
+  {% if item.groupsync == 'AD' %}
+  - ldap:
+      credentialsSecret:
+        name: ldap-bind-password-{{ item.name }}
+        namespace: group-sync-operator
+      {% if item.cafile is defined %}
+      caSecret:
+        name: groupsync-ca-{{ item.name }}
+        namespace: group-sync-operator
+        key: ca.crt
+      {% endif %}
+      insecure: false
+      augmentedActiveDirectory:
+          groupsQuery:
+              baseDN: "{{ item.group_base }}"
+              scope: sub
+              derefAliases: never
+              pageSize: 0
+          groupUIDAttribute: dn
+          groupNameAttributes:
+          - cn
+          usersQuery:
+              baseDN: "{{ item.base }}"
+              scope: sub
+              derefAliases: never
+              pageSize: 0
+              filter: (objectclass=*)
+          userNameAttributes: {{ item.attributes.preferredUsername }}
+          groupMembershipAttributes:
+          - memberOf
+      {% if item.groupsync_groups | length > 0 %}
+      groupUIDNameMapping:
+        {% for group in item.groupsync_groups %}
+        "{{ group.dn }}": {{ group.short }}
+        {% endfor %}
+      whitelist:
+        {% for group in item.groupsync_groups %}
+        - "{{ group.dn }}"
+        {% endfor %}
+      {% endif %}
+      url: {{ item.scheme | default('ldap') }}://{{ item.host }}
+    name: {{ item.name }}
+  {% endif %}
+  {% if item.groupsync == 'azure' %}
+  - azure:
+      credentialsSecret:
+        name: {{ item.name }} 
+        namespace: group-sync-operator
+      {% if item.groupsync_groups | length > 0 %}
+      groups:
+        {% for group in item.groupsync_groups %}
+        - "{{ group }}"
+        {% endfor %}
+      {% endif %}
+    name: {{ item.name }}
+  {% endif %}

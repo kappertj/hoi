@@ -1,0 +1,8 @@
+#jinja2: lstrip_blocks: True
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: openshift-gitops
+  namespace: openshift-gitops
+spec:
+  resourceTrackingMethod: annotation+label

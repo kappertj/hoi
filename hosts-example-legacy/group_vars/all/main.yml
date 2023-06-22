@@ -1,0 +1,231 @@
+# install_method can be one of ['libvirt', 'vmware', 'grub', 'ilo'], can also
+# be overridden per host
+install_method: vmware
+# Select flavour ['okd', 'ocp'] and major version, e.g. '4.4'
+install_flavour: ocp
+install_version: "4.8"
+bastion_host: localhost
+
+
+api_vip: 10.1.0.100
+ingress_vip: 10.1.0.101
+
+ntp_servers:
+- 10.0.0.1
+
+# If bastion_host is localhost, uncomment this line and set it to the external
+# hostname of your bastion
+#bastion_external_hostname: bastion.example.com
+
+# Set cluster name
+cluster: ocp
+# base_domain, final domain names end up as api(-int).{{ cluster }}.{{ base_domain }} and
+# *.apps.{{ cluster }}.{{ base_domain }}
+base_domain: example.com
+
+http_proxy: http://proxy.example.com:8080
+https_proxy: https://proxy.example.com:8080
+no_proxy: .svc,localhost,localhost.localdomain,.localdomain,192.168.0.0/24,.example.com
+
+openshift_manifest_customizations:
+- file: cluster-scheduler-02-config.yml
+  regexp: '^  mastersSchedulable:'
+  line: '  mastersSchedulable: false'
+
+# Paths are local on the ansible controller node when using the 'file' lookup, you
+# can also include de actual contents here.
+openshift_coreos_sshpubkey: "{{ lookup('file', '/path/to/public_key') }}"
+openshift_pullsecret: "{{ lookup('file', 'path/to/pull_secret/file') }}"
+
+
+# Wildcard certificates for the routers, make sure they exist on the Ansible
+# controller node
+routercerts_certificates:
+- name: default
+  hostname: "*.apps.{{ cluster }}.{{ base_domain }}"
+  certfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.fullchain.pem
+  keyfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.key
+
+# Organizational CA to be trusted, file path on **bastion_host**
+custom_ca_file: /etc/ipa/ca.crt
+
+# Custom certificate for api.{{ cluster }}.{{ base_domain }}, file paths on
+# Ansible controller nodes
+apiserver_certificate:
+  name: custom-api-cert
+  hostname: api.{{ cluster }}.{{ base_domain }}
+  certfile: /opt/openshift_files/certs/{{ cluster }}/api.{{ cluster }}.{{ base_domain }}.fullchain.pem
+  keyfile: /opt/openshift_files/certs/{{ cluster }}/api.{{ cluster }}.{{ base_domain }}.key
+
+
+# iSCSI volumes to create PVs and storageclasses for
+iscsi_pvs:
+- name: metrics-1
+  portal: 10.1.0.10
+  iqn: iqn.2020-06.com.example.bastion:metrics-1
+  fstype: xfs
+  capacity: 100Gi
+  labels:
+    usage: metrics
+  storageclass: metrics
+- name: metrics-2
+  portal: 10.1.0.10
+  iqn: iqn.2020-06.com.example.bastion:metrics-2
+  fstype: xfs
+  capacity: 100Gi
+  labels:
+    usage: metrics
+  storageclass: metrics
+- name: alerts-1
+  portal: 10.1.0.10
+  iqn: iqn.2020-06.com.example.bastion:alerts-1
+  fstype: xfs
+  capacity: 5Gi
+  labels:
+    usage: alerts
+  storageclass: metrics
+- name: alerts-2
+  portal: 10.1.0.10
+  iqn: iqn.2020-06.com.example.bastion:alerts-2
+  fstype: xfs
+  capacity: 5Gi
+  labels:
+    usage: alerts
+  storageclass: metrics
+- name: alerts-3
+  portal: 10.1.0.10
+  iqn: iqn.2020-06.com.example.bastion:alerts-3
+  fstype: xfs
+  capacity: 5Gi
+  labels:
+    usage: alerts
+  storageclass: metrics
+- name: logging-1
+  portal: 10.1.0.10
+  portals:
+  - 10.1.0.10:3260
+  - 10.1.0.11:3260
+  iqn: iqn.2020-06.com.example.bastion:logging-1
+  initiatorname: iqn.2000-02.com.flopsels:test
+  lun: 31
+  fstype: xfs
+  capacity: 150Gi
+  labels:
+    usage: logging
+  storageclass: logging
+- name: logging-2
+  portal: 10.1.0.10
+  iqn: iqn.2020-06.com.example.bastion:logging-2
+  fstype: xfs
+  capacity: 150Gi
+  labels:
+    usage: logging
+  storageclass: logging
+- name: logging-3
+  portal: 10.1.0.10
+  iqn: iqn.2020-06.com.example.bastion:logging-3
+  fstype: xfs
+  capacity: 150Gi
+  labels:
+    usage: logging
+  storageclass: logging
+
+# NFS server and export path for dynamic NFS client provisioner
+nfs_client_provisioner_server: 1.2.3.4
+nfs_client_provisioner_export: /exports/nfs
+
+# ldap settings
+#ldap_service_dn: uid=ldap-service,cn=sysaccounts,cn=etc,dc=example,dc=com
+#ldap_service_pass: secret_password
+ldap_service_dn: uid=ldap-service,cn=sysaccounts,cn=etc,dc=example,dc=com
+ldap_service_pass: redhat123!
+
+azure_group_sync:
+- APP-example-development-ADMINS
+- APP-example-development-EDIT
+- APP-example-development-PROVISIONERS
+- APP-example-development-USERS
+- APP-example-development-VIEW
+
+
+# Authentications to configure, keep what you need, delete the rest, all LDAP
+# Write your own role or update this one for more choices
+# cafile is local to bastion host
+oauths:
+- name: example-ipa
+  type: LDAP
+  binddn: "{{ ldap_service_dn }}"
+  bindpass: "{{ ldap_service_pass }}"
+  scheme: ldap
+  host: ipa.example.com
+  base: cn=users,cn=accounts,dc=example,dc=com
+  cafile: /etc/ipa/ca.crt
+  attributes:
+    id:
+    - uid
+    email:
+    - mail
+    name:
+    - displayName
+    preferredUsername:
+    - uid
+- name: example-AD
+  type: LDAP
+  binddn: "{{ ldap_service_dn }}"
+  bindpass: "{{ ldap_service_pass }}"
+  scheme: ldaps
+  host: ad.example.com
+  base: cn=users,cn=accounts,dc=example,dc=com
+  urlfilter: '?samaccountname?sub'
+  cafile: /path/to/AD/ca.crt
+  attributes:
+    id:
+    - cn
+    email:
+    - mail
+    name:
+    - description
+    preferredUsername:
+    - sAMAccountName
+- name: example-azure
+  type: OpenID
+  openid_clientid: "{{ encrypted_openid_clientid }}"
+  openid_issuer: "{{ encrypted_openid_issuer }}"
+  openid_client_secret: "{{ encrypted_openid_client_secret }}"
+  cafile: "{{ custom_ca_file }}"
+
+groupsync_cronjob_ldap_user: "{{ ldap_service_dn }}"
+groupsync_cronjob_ldap_password: "{{ ldap_service_pass }}"
+groupsync_ldap_ca_file: /tmp/ca.crt
+groupsync_cronjob_ldap_base_dc_groups: "cn=groups,cn=accounts,dc=example,dc=com"
+groupsync_cronjob_ldap_base_dc_users: "cn=users,cn=accounts,dc=example,dc=com"
+groupsync_cronjob_namespace: openshift-ops
+groupsync_cronjob_ldap_url: ldap://bastion.example.com:389
+groupsync_cronjob_cluster_admins_group: clusteradmin
+groupsync_cronjob_type: ad
+#groupsync_cronjob_type: ipa
+groupsync_groups:
+- dn: "cn=clusteradmin,cn=groups,cn=accounts,dc=example,dc=com"
+  short: clusteradmin
+
+
+# Alertmanager config, adjust to taste
+#alertmanager_config:
+#  global:
+#    resolve_timeout: 5m
+#  route:
+#    group_wait: 30s
+#    group_interval: 5m
+#    repeat_interval: 12h
+#    receiver: default
+#    routes:
+#    - match:
+#        alertname: Watchdog
+#      repeat_interval: 5m
+#      receiver: watchdog
+#  receivers:
+#  - name: default
+#    webhook_configs:
+#    - url: https://some.webhook.receiver.com/mywebhook/id
+#      send_resolved: true
+#  - name: watchdog

@@ -1,0 +1,6 @@
+ilo_user: Administrator
+ilo_password: supersecret
+ilo_address: 192.168.1.100
+ilo_version: 5
+ilo_use_proxy: no
+ilo_boot_from_url: no

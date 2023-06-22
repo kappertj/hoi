@@ -1,0 +1,25 @@
+trident_backends:
+- name: trident
+  data:
+    version: 1
+    storageDriverName: ontap-nas
+    managementLIF: 10.0.0.1
+    dataLIF: 10.0.0.2
+    backendName: ontap-nas
+    svm: trident_svm
+    limitAggregateUsage: 80%
+    limitVolumeSize: 50Gi
+    nfsMountOptions: nfsvers=4
+    defaults:
+      spaceReserve: volume
+      exportPolicy: myk8scluster
+      snapshotPolicy: default
+      snapshotReserve: '10'
+    deletionPolicy: retain
+  storageclass:
+    parameters:
+      media: "ssd"
+      provisioningType: "thin"
+  credentials:
+    username: foo
+    password: bar

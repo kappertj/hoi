@@ -1,0 +1,7 @@
+#jinja2: lstrip_blocks: True
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+{% for file in allowedregistries_asset_files.files %}
+- {{ file.path | replace(openshift_gitops_dir + '/allowedregistries/', '') }} 
+{% endfor %}

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/description: "This namespace is for the Azure group sync operator"
+    openshift.io/display-name: "group-sync-operator"
+  labels:
+    openshift.io/cluster-monitoring: "true"
+  name: group-sync-operator

@@ -1,0 +1,15 @@
+- name: Deploy Objects
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'eventrouter/' + item) | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  loop:
+  - eventrouter-clusterrole.yml.j2
+  - eventrouter-clusterrolebinding.yml.j2
+  - eventrouter-configmap.yml.j2
+  - eventrouter-sa.yml.j2
+  - eventrouter-deployment.yml.j2
+

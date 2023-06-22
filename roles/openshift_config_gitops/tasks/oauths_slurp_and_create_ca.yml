@@ -1,0 +1,9 @@
+- name: Slurp ca content
+  slurp:
+    src: "{{ item.cafile }}"
+  register: oauths_ca_content
+
+- name: Template CA ConfigMap for Identity Provider
+  template:
+    src: oauth/oauths-ca.yml.j2
+    dest: "{{ openshift_gitops_dir}}/oauth/assets/ldap-ca-{{ item.name }}.yml"

@@ -1,0 +1,23 @@
+#jinja2: lstrip_blocks: True
+apiVersion: local.storage.openshift.io/v1alpha1
+kind: LocalVolumeSet
+metadata:
+  name: ocs-local-storage
+  namespace: openshift-local-storage
+spec:
+  deviceInclusionSpec:
+    deviceTypes:
+      - disk
+      - part
+    minSize: 1Gi
+  nodeSelector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+{% for host in groups['storage'] %}
+              - {{ host }}
+{% endfor %}
+  storageClassName: ocs-local-storage
+  volumeMode: Block

@@ -1,0 +1,37 @@
+---
+# Requirements:
+# - Ensure access to the openshift cluster
+# - Ensure user has cluster-admin permissions
+# - Ensure an active 'oc login' session
+
+# Performing solution described at:
+# - Title: OCP console reports warning 'CephMonVersionMismatch'.
+# - URL: https://access.redhat.com/solutions/5424201
+
+- name: Delete pod labeled as app=rook-ceph-mgr
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Get required pods
+    k8s_info:
+      kind: Pod
+      namespace: openshift-storage
+      label_selectors:
+      - app = rook-ceph-mgr
+    register: pod_info
+
+  - name: Filter pod object
+    set_fact:
+      pod_info_status: "{{ pod_info.resources | json_query(query) }}"
+    vars:
+      query: "[*].{ name: metadata.name, namespace: metadata.namespace, labels: metadata.labels, node: spec.nodeName, status: status.phase }"
+
+  - name: Delete required pods
+    k8s:
+      kind: Pod
+      name: "{{ item.name }}"
+      namespace: "{{ item.namespace }}"
+      state: absent
+    register: pod_delete_info
+    loop: "{{ pod_info_status }}"

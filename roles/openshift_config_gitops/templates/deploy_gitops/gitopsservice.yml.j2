@@ -1,0 +1,10 @@
+apiVersion: pipelines.openshift.io/v1alpha1
+kind: GitopsService
+metadata:
+  name: cluster
+spec:
+  {% if groups['infra'] | length > 0 %}
+  runOnInfra: true
+  {% else %}
+  runOnInfra: false
+  {% endif %}

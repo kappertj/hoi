@@ -1,0 +1,13 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  name: {{ item.name }}
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  {% for pool in item.addresspools %}
+  - {{ pool }}
+  {% endfor %}

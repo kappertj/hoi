@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: groupsync-ca-{{ item.name }}
+  namespace: group-sync-operator
+  annotations:
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
+stringData:
+  ca.crt: |
+    {{ groupsync_ca_content.content | b64decode | indent(width=4) }}

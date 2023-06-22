@@ -1,0 +1,54 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+metadata:
+  name: {{ cluster }}
+baseDomain: {{ base_domain }}
+{% if http_proxy is defined %}
+proxy:
+  httpProxy: {{ http_proxy }}
+  httpsProxy: {{ https_proxy }}
+  noProxy: {{ no_proxy }} 
+{% endif %}
+compute:
+- hyperthreading: Disabled
+  name: worker
+  replicas: {{ worker_replicas | default(0) }}
+controlPlane:
+  hyperthreading: Disabled
+  name: master
+  replicas: {{ master_replicas | default(3) }}
+networking:
+  clusterNetworks:
+    {{ openshift_clusternetworks | to_nice_yaml(indent=2) | trim | indent(4) }}
+  serviceNetwork:
+    {{ openshift_servicenetworks | to_nice_yaml(indent=2) | trim | indent(4) }}
+  networkType: {{ openshift_networktype }}
+{% if airgapped is defined %}
+imageContentSources:
+- mirrors:
+  - {{ mirror.url }}:{{ mirror.port}}/{{ mirror.repo}}/release
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+- mirrors:
+  - {{ mirror.url }}:{{ mirror.port}}/{{ mirror.repo}}/release-images
+  source: quay.io/openshift-release-dev/ocp-release
+{% endif %}
+platform:
+  {% if vmware_csi is defined %}
+  vsphere:
+    vcenter: {{ vcenters[vmware.vcenter].hostname }}
+    cluster: {{ vcenters[vmware.vcenter].cluster }}
+    username: "{{ vcenters[vmware.vcenter].username }}"
+    password: "{{ vcenters[vmware.vcenter].password }}"
+    datacenter: {{ vcenters[vmware.vcenter].datacenter }}
+    defaultDatastore: {{ vmware.datastore | default(vcenters[vmware.vcenter].datastore) }}
+    folder: "/{{ vmware.vcenter }}/vm/{{ vmware.folder }}"
+{% else %}
+  none: {}
+{% endif %}
+{% if custom_ca_file is defined %}
+additionalTrustBundle: |
+  {{ custom_ca_file_contents.content | b64decode | indent(2) }}
+{% endif %}
+pullSecret: | 
+  {{ openshift_pullsecret | to_json | indent(2) }}
+sshKey: "{{ openshift_coreos_sshpubkey }}"

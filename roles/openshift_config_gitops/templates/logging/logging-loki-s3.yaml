@@ -1,0 +1,13 @@
+jinja2: lstrip_blocks: "True"
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: logging-loki-s3
+  namespace: openshift-logging
+stringData:
+  access_key_id: {{ loki_s3_access_key_id }}
+  access_key_secret: {{ loki_s3_access_key_secret }}
+  bucketnames: {{ loki_s3_bucket_name }}
+  endpoint: {{ loki_s3_endpoint }}

@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bitnami-sealed-secrets
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: {{ openshift_gitops_upstream_base }}
+    targetRevision: {{ openshift_gitops_upstream_ref | default('HEAD') }}
+    path: bitnami-sealed-secrets
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-sealed-secrets
+  syncPolicy:
+    automated:
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+    - CreateNamespace=true

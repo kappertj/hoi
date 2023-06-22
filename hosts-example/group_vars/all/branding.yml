@@ -1,0 +1,8 @@
+custom_logo_file: /some/path/on/ansible/controller.svg
+custom_background_file: /some/other/path/on/ansible/controller.svg
+custom_product_name: HCS OpenShift Container Platform
+custom_product_disclaimer_body: |
+  You could put some witty here. Or something more serious, about how digital
+  trespassers will prosecuted to the fullest extent of the law. Or just
+  something that inspires people.
+custom_product_disclaimer_footer: Unauthorized use is strictly prohibited.

@@ -1,0 +1,12 @@
+removedefaultregistries: false
+allowedregistries:
+- url: internal.example.com
+  ca: |
+    CERTS GO HERE
+    ...
+    CERTS GO HERE
+  allowimport: true
+- url: insecure.example.com
+  insecure: true
+- url: registry.gitlab.com/wanderb/isitfriday:minimize
+  allowimport: true

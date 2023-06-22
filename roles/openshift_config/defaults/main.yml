@@ -1,0 +1,112 @@
+install_version_major_minor: "{{ install_version | regex_replace('^([0-9]+\\.[0-9]+).*$', '\\1') }}"
+
+openshift_ignition_dir: /opt/openshift_files/{{ cluster }}/ignition
+
+openshift_kubeconfig: "{{ openshift_ignition_dir }}/auth/kubeconfig"
+oc_command: "/usr/local/bin/oc --kubeconfig={{ openshift_kubeconfig }}"
+
+
+nfs_client_provisioner_serviceaccount: nfs-client-provisioner
+nfs_client_provisioner_namespace: openshift-nfs-client-provisioner
+nfs_client_provisioner_name: nfs-client-provisioner
+nfs_client_provisioner_server: FIXME
+nfs_client_provisioner_export: /a/path
+nfs_client_provisioner_storageclass: managed-nfs-storage
+nfs_client_provisioner_make_default: "true"
+
+prometheus_storageclass: metrics
+prometheus_storage_size: 100Gi
+
+alertmanager_storageclass: metrics
+alertmanager_storage_size: 5Gi
+
+registry_management_state: Managed
+registry_storage_claim_name: "{{ cluster }}-registry-claim"
+
+
+elasticsearch_replicas: 3
+elasticsearch_storageclass: logging
+elasticsearch_storage_size: 150Gi
+elasticsearch_redundancy_policy: SingleRedundancy
+elasticsearch_memory_limit: 8Gi
+elasticsearch_cpu_request: 200m
+elasticsearch_memory_request: 8Gi
+
+kibana_memory_limit: 1Gi
+kibana_cpu_request: 500m
+kibana_memory_request: 1Gi
+
+curator_memory_limit: 200Mi
+curator_memory_request: 200Mi
+curator_cpu_request: 200m
+curator_schedule: "30 3 * * *"
+curator_default_retention_days: 14
+
+fluentd_memory_limit: 1Gi
+fluentd_memory_request: 1Gi
+fluentd_cpu_request: 200m
+
+
+# valid choices: ipa, ad
+groupsync_cronjob_type: ipa
+groupsync_cronjob_ldap_user: 'cn=example,OU=example,dc=example,dc=com'
+groupsync_cronjob_ldap_password: FIXME
+groupsync_ldap_ca_file: /path/to/ca/on/bastion
+groupsync_cronjob_ldap_base_dc_groups: "dc=example,dc=com"
+groupsync_cronjob_ldap_base_dc_users: "dc=example,dc=com"
+groupsync_cronjob_namespace: openshift-ops
+groupsync_cronjob_ldap_url: ldap://ldap.example.com:389
+groupsync_cronjob_image: image-registry.openshift-image-registry.svc:5000/openshift/cli
+groupsync_cronjob_image_version: latest
+groupsync_cronjob_cluster_admins_group: openshift-admins
+groupsync_groups: []
+
+# Azure groupsync
+azure_group_sync: []
+
+azure_group_sync_cluster_admin: APP-EXAMPLE-SANDBOX-CLUSTER-ADMINS
+
+custom_logo_file: hcs-ocp-logo.svg
+custom_background_file: hcs-ocp-background.svg
+custom_product_name: HCS OpenShift Container Platform.
+custom_product_disclaimer_body: ""
+custom_product_disclaimer_footer: ""
+
+local_storage_operator_namespace: openshift-local-storage
+
+openshift_networktype: OpenShiftSDN
+
+self_provisioners:
+  remove_default: false
+  users: []
+  groups: []
+
+certificate_expiry_limit_days: 30
+
+registry_storage_type_pvc: true
+registry_storage_type_obc: false
+
+openshift_components:
+- chrony
+- iscsi_pvs
+- local_storage
+- nfs_client_provisioner
+- monitoring_storage
+- registry_storage
+- cluster_logging
+- eventrouter
+- network_policies
+- deploy_tekton
+- deploy_gitops
+- imagepruner
+- oauth
+- self_provisioners
+- groupsync
+- azure_groupsync
+- alertmanager
+- custom_logo
+- custom_login
+- routercerts
+- apiserver_certs
+- etcd_encryption
+- kubeconfig_rootca

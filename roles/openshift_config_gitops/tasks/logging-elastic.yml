@@ -1,0 +1,27 @@
+---
+- name: Ensure gitops directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: logging
+
+- name: Generate logging Config ConfigMap
+  template:
+    src: "logging/cluster-logging.yml.j2"
+    dest: "{{ openshift_gitops_dir }}/logging/assets/cluster-logging.yaml"
+
+- name: Generate nodeselector patches
+  template:
+    src: "logging/{{ item }}.yaml.j2"
+    dest: "{{ openshift_gitops_dir }}/logging/patches/{{ item }}.yaml"
+  loop:
+  - nodeselector-sub-es
+  - nodeselector-sub-cl
+  when:
+  - groups['infra'] | default([]) | length > 0
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: logging

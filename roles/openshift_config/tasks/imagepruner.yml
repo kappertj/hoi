@@ -1,0 +1,7 @@
+---
+- name: Configure image pruner to run nightly
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'imagepruner/imagepruner.yaml.j2') | from_yaml }}"
+

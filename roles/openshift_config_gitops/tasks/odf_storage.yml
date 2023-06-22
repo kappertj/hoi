@@ -1,0 +1,39 @@
+---
+- name: Ensure gitops directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: odf-storage
+
+- name: Create LocalVolumeSet for local-storage
+  template:
+    src: odf_storage/localvolumeset.yml.j2
+    dest: "{{ openshift_gitops_dir }}/odf-storage/assets/localvolumeset.yaml"
+
+- name: Create StorageSystem
+  template:
+    src: odf_storage/storagesystem.yml.j2
+    dest: "{{ openshift_gitops_dir }}/odf-storage/assets/storagesystem.yaml"
+
+- name: Create StorageCluster
+  template:
+    src: odf_storage/storagecluster.yml.j2
+    dest: "{{ openshift_gitops_dir }}/odf-storage/assets/storagecluster.yaml"
+
+- name: Set custom odf_storage version
+  template:
+    src: odf_storage/subscription-patch.yml.j2
+    dest: "{{ openshift_gitops_dir }}/odf-storage/patches/subscription-channel.yaml"
+
+- name: Set custom odf_storage version
+  template:
+    src: odf_storage/nodeselector-sub.yaml.j2
+    dest: "{{ openshift_gitops_dir }}/odf-storage/patches/nodeselector-sub.yaml"
+  when:
+  - groups['storage'] | default([]) | length > 0
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: odf-storage

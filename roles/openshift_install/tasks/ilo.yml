@@ -1,0 +1,15 @@
+- name: Reboot machine using ilo
+  hpilo_boot:
+    login: "{{ ilo_user }}"
+    password: "{{ ilo_password }}"
+    host: "{{ ilo_address }}"
+    image: "http://{{ bastion_external_hostname | default (bastion_host) }}/{{ inventory_hostname }}.iso"
+    media: cdrom
+    state: boot_once
+    force: true
+    #ssl_version: SSLv23
+  delegate_to: "{{ bastion_host }}"
+  register: ilo_result
+  retries: 10
+  delay: 10
+  until: ilo_result is not failed

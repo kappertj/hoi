@@ -1,0 +1,18 @@
+vcenters:
+  dcr1:
+    hostname: vcenter1.example.com
+    username: "{{ encrypted_vcenter_username }}"
+    password: "{{ encrypted_vcenter_password }}"
+    datacenter: DCR2
+    datastore: DCR1-STORE
+    iso_datastore: DCR1-ISO
+    cluster: CL-DCR1
+  dcr2:
+    hostname: vcenter2.example.com
+    username: "{{ encrypted_vcenter_username }}"
+    password: "{{ encrypted_vcenter_password }}"
+    datacenter: DCR2
+    datastore: DCR2-STORE
+    iso_datastore: DCR2-ISO
+    cluster: CL-DCR2
+

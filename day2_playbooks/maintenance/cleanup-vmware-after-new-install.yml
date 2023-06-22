@@ -1,0 +1,90 @@
+---
+# Requirements:
+# - Ensure access to the openshift cluster
+# - Ensure user has cluster-admin permissions
+# - Ensure an active 'oc login' session
+
+- name: Remove bootstrap node from vCenter
+  hosts:
+  - bootstrap
+  gather_facts: no
+  tasks:
+  - name: Remove bootstrap node
+    vmware_guest:
+      hostname: "{{ vcenters[vmware.vcenter].hostname }}"
+      username: "{{ vcenters[vmware.vcenter].username }}"
+      password: "{{ vcenters[vmware.vcenter].password }}"
+      validate_certs: "{{ vcenters[vmware.vcenter].validate_certs | default(omit) }}"
+      name: "{{ vmware_vm_name_notation | default(inventory_hostname_short | upper) }}"
+      folder: "{{ vmware.folder }}"
+      datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
+      state: absent
+      force: true
+    when: install_method == 'vmware'
+    delegate_to: "{{ bastion_host }}"
+    tags:
+      - remove_bootstrap_node
+
+- name: Unmount ISO's from CoreOS VM's and Remove the leftover ISO's from the ISO datastore
+  hosts:
+  - bootstrap
+  - masters
+  - infra
+  - workers
+  - storage
+  gather_facts: false
+  tasks:
+  - name: Create a cluster operations namespace with specific requirements for maintenance activities
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          annotations:
+            openshift.io/description: "Namespace for specific OpenShift Operations"
+            openshift.io/display-name: "cluster-ops"
+            openshift.io/node-selector: ""
+            scheduler.alpha.kubernetes.io/defaultTolerations: '[{"operator": "Exists"}]'
+          name: cluster-ops
+    delegate_to: "{{ bastion_host }}"
+    run_once: true
+    
+  - name: Start debug pod on nodes to eject CD-ROM
+    shell: |
+      /usr/bin/expect -c '
+      set timeout 20
+      set cmd_chroot "chroot /host"
+      set cmd_eject_cdrom "eject -r"
+      spawn oc debug node/{{ inventory_hostname }} -n cluster-ops
+      send "$cmd_chroot\r"
+      send "$cmd_eject_cdrom\r"
+      send "exit\r"
+      expect { -re "*.*" }'
+    register: expect_output
+    delegate_to: "{{ bastion_host }}"
+    tags:
+      - debug_node_eject_cdrom
+
+  - name: Expect output for the human
+    debug:
+      msg: "{{ expect_output.stdout_lines }}"
+    when: expect_output is defined
+    delegate_to: "{{ bastion_host }}"
+    tags:
+      - debug_node_eject_cdrom
+
+  - name: Removing CoreOS iso's on the ISO datastore
+    vsphere_file:
+      hostname: "{{ vcenters[vmware.vcenter].hostname }}"
+      username: "{{ vcenters[vmware.vcenter].username }}"
+      password: "{{ vcenters[vmware.vcenter].password }}"
+      validate_certs: "{{ vcenters[vmware.vcenter].validate_certs | default(omit) }}"
+      datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
+      datastore: "{{ vcenters[vmware.vcenter].iso_datastore }}"
+      path: iso/{{ inventory_hostname }}.iso
+      state: absent
+    when: install_method == 'vmware'
+    delegate_to: "{{ bastion_host }}"
+    tags:
+      - remove_iso_on_datastore

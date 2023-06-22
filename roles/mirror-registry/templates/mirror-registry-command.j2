@@ -1,0 +1,12 @@
+{{ mirror_registry_download_dir }}/mirror-registry {{ mirror_registry_install_command }} 
+--quayRoot={{ mirror_registry.directory }}
+{% if mirror_registry.quaystorage is defined %}--quayStorage={{ mirror_registry.quaystorage }}{% endif %}
+--quayHostname={{ mirror_registry.hostname }}{% if mirror_registry.port is defined %}:{{ mirror_registry.port }}{% endif %}
+{% if mirror_registry_install_command == 'install' %}
+  {% if mirror_registry.user is defined %}
+    --initUser={{ mirror_registry.user }}{% endif%}
+    --initPassword={{ mirror_registry.password }} {% if mirror_registry.ssl is defined %}
+    --sslCert={{ mirror_registry.ssl }}/{{ mirror_registry.hostname }}.fullchain.pem
+    --sslKey={{ mirror_registry.ssl }}/{{ mirror_registry.hostname }}.key
+  {% endif %}
+{% endif %}

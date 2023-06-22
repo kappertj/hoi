@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-config
+  namespace: openshift-gitops
+spec:
+  generators:
+  - git:
+      repoURL: {{ openshift_gitops_repo_url }}
+      revision: {{ openshift_gitops_repo_version }}
+      directories:
+      - path: '*'
+  template:
+    metadata:
+      name: '{% raw %}{{ path.basename }}{% endraw %}'
+    spec:
+      project: default
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 100
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 10m
+      source:
+        repoURL: {{ openshift_gitops_repo_url }}
+        targetRevision: {{ openshift_gitops_repo_version }}
+        path: '{% raw %}{{ path }}{% endraw %}'
+      destination:
+        server: https://kubernetes.default.svc
+      ignoreDifferences:
+      - group: operator.openshift.io/v1
+        kind: Console
+        jsonPointers:
+        - /spec/plugins
+      - group: imageregistry.operator.openshift.io/v1
+        kind: Config
+        jsonPointers:
+        - /spec/httpSecret
+      - group: '*'
+        kind: '*'
+        managedFieldsManagers:
+        - service-ca-operator
+        - ocs-operator
+        - rook
+        - noobaa-operator

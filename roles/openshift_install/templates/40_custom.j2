@@ -1,0 +1,13 @@
+#!/bin/sh
+#jinja2: lstrip_blocks: True
+exec tail -n +3 $0
+# This file provides an easy way to add custom menu entries.  Simply type the
+# menu entries you want to add after this comment.  Be careful not to change
+# the 'exec tail' line above.
+menuentry 'Install CoreOS' {
+  {% if coreos_root_disk | length > 0 %}
+  set root={{ coreos_root_disk }}
+  {% endif %}
+  linux {{ coreos_boot_path }}{{ coreos_urls.kernel.url | basename }} {{ coreos_installation_args }}
+  initrd {{ coreos_boot_path }}{{ coreos_urls.initramfs.url | basename }}
+}

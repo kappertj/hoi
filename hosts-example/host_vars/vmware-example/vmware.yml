@@ -1,0 +1,29 @@
+vmware:
+  vcenter: dcr1
+  memory: 32768
+  vcpu: 4
+  disk: 120
+  folder: OpenShift
+  guest_id: rhel7_64Guest
+  hardware_version: 15
+  boot_firmware: bios
+  customvalues:
+  - key: "disk.EnableUUID"
+    value: "true"
+  advanced_settings:
+  - key: "disk.EnableUUID"
+    value: "TRUE"
+  datastore: 'DifferentStore'
+
+vmware_vm_name_notation: "{{ inventory_hostname_short }}"
+install_dev_type: eagerzeroedthick
+
+extra_disks:
+- size_gb: 200
+  datastore: MyDataStore
+  type: thick
+- size_gb: 200
+  datastore: MyDataStore
+  type: thick
+
+

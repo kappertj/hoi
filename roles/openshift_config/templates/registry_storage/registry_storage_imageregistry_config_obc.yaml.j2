@@ -1,0 +1,18 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  managementState: {{ registry_management_state }}
+  replicas: {{ registry_replicas | default('1') }}
+  {% if registry_storage_supports_rwx %}
+  rolloutStrategy: RollingUpdate
+  {% else %}
+  rolloutStrategy: Recreate
+  {% endif %}
+  storage:
+    s3:
+      bucket: {{ configmap_obc_registry_openshift_storage.resources[0].data.BUCKET_NAME }}
+      region: infra
+      regionEndpoint: {{ route_s3_registry_openshift_storage.resources[0].spec.host }}

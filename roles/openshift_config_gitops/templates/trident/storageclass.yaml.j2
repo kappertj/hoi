@@ -1,0 +1,17 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: "{{ item.storageclass.name | default(item.name) }}"
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "10"
+provisioner: csi.trident.netapp.io
+parameters:
+  backendType: "{{ item.data.storageDriverName }}"
+  {% if item.storageclass.parameters | default(False) %}
+  {% for key, value in item.storageclass.parameters.items()  %}
+  {{ key }}: "{{ value }}"
+  {% endfor %}
+  {% endif %}
+

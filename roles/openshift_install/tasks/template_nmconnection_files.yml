@@ -1,0 +1,23 @@
+- name: Delete nmconnections directory for host
+  file:
+    path: "{{ openshift_nmconnections_dir }}/{{ inventory_hostname }}"
+    state: absent
+  delegate_to: "{{ bastion_host }}"
+
+- name: Create nmconnections directory for host
+  file:
+    path: "{{ openshift_nmconnections_dir }}/{{ inventory_hostname }}"
+    state: directory
+  delegate_to: "{{ bastion_host }}"
+
+- name: Template .nmconnection files for host
+  command: "{{ nm_initrd_generator_command }} -c {{ openshift_nmconnections_dir }}/{{ inventory_hostname }} -- {{ coreos_installation_args }}"
+  delegate_to: "{{ bastion_host }}"
+
+- name: Find generated .nmconnection file
+  find:
+    path: "{{ openshift_nmconnections_dir }}/{{ inventory_hostname }}"
+    file_type: file
+    patterns: "*.nmconnection"
+  delegate_to: "{{ bastion_host }}"
+  register: nmconnection_files

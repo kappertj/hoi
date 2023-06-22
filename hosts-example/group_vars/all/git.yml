@@ -1,0 +1,8 @@
+#openshift_gitops_dir: "/opt/openshift_files/{{ cluster }}/gitops"
+openshift_gitops_repo_url: git@git.example.com:ocp/gitops.git
+#openshift_gitops_repo_version: main
+openshift_gitops_repo_ssh_privkey_file: "/opt/openshift_files/{{ cluster }}/keys/gitops.rsa"
+openshift_gitops_repo_name: gitops
+openshift_gitops_repo_known_hosts: "{{ lookup('pipe', 'ssh-keyscan git.example.com') }}"
+openshift_gitops_upstream_base: https://gitlab.com/hcs-company/openshift-gitops-base.git
+

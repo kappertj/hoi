@@ -1,0 +1,18 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: operator.openshift.io/v1
+kind: Console
+metadata:
+  annotations:
+    release.openshift.io/create-only: "true"
+  name: cluster
+spec:
+  customization:
+    {% if custom_logo_file is defined %}
+    customLogoFile:
+      key: custom-logo.svg
+      name: custom-logo
+    {% endif %}
+    {% if custom_product_name is defined %}
+    customProductName: {{ custom_product_name }}
+    {% endif %}
+  managementState: Managed

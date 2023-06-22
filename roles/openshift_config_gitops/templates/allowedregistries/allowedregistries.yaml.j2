@@ -1,0 +1,41 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: config.openshift.io/v1
+kind: Image 
+metadata:
+  annotations:
+    release.openshift.io/create-only: "true"
+  name: cluster
+spec:
+  {% set importregistries = allowedregistries | selectattr("allowimport", "defined") | selectattr("allowimport")%}
+  {% set insecureregistries = allowedregistries | selectattr("insecure", "defined") | selectattr("insecure") %}
+  {% set caregistries = allowedregistries | selectattr("ca", "defined") %}
+  {% if importregistries | length > 0 %}
+  allowedRegistriesForImport: 
+  {% for registry in importregistries %}
+  - domainName: {{ registry.url }}
+    insecure: {{ 'true' if registry.insecure | default(false) else 'false' }}
+  {% endfor %}
+  {% endif %}
+  {% if caregistries | length > 0 %}
+  additionalTrustedCA: 
+    name: external-registry-ca
+  {% endif %}
+  registrySources: 
+    allowedRegistries:
+    {% if not removedefaultregistries | default(false) %}
+    - image-registry.openshift-image-registry.svc:5000
+    - quay.io
+    - registry.redhat.io
+    - docker.io
+    - k8s.gcr.io
+    - gcr.io
+    {% endif %}
+    {% for registry in allowedregistries %}
+    - {{ registry.url }}
+    {% endfor %}
+  {% if insecureregistries | length > 0 %}
+    insecureRegistries:
+    {% for registry in insecureregistries %}
+    - {{ registry.url }}
+    {% endfor %}
+  {% endif %}

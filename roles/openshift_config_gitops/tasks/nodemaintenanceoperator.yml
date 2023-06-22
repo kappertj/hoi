@@ -1,0 +1,19 @@
+---
+- name: Ensure gitops directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: nodemaintenanceoperator
+
+- name: Set custom Node Maintenance subscription channel
+  template:
+    src: nodemaintenanceoperator/subscription-patch.yml.j2
+    dest: "{{ openshift_gitops_dir }}/nodemaintenanceoperator/patches/subscription-channel.yaml"
+  when:
+  - nodemaintenanceoperator_channel is defined
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: nodemaintenanceoperator

@@ -1,0 +1,145 @@
+---
+- name: Ensure trident Application directory exists
+  file:
+    path: "{{ openshift_gitops_dir}}/trident/assets"
+    state: directory
+
+- name: Ensure directory exists for trident download
+  file:
+    path: /opt/openshift_files/trident-operator/{{ trident_version }}
+    state: directory
+
+- name: Download and extract trident installer
+  unarchive:
+    remote_src: true
+    src: "{{ trident_operator_download_url}}"
+    dest: /opt/openshift_files/trident-operator/{{ trident_version }}
+  tags:
+  - download
+
+- name: Copy deployment to git directory
+  copy:
+    remote_src: True
+    src: /opt/openshift_files/trident-operator/{{ trident_version }}/trident-installer/deploy/
+    dest: "{{ openshift_gitops_dir}}/trident/"
+
+- name: Add open node-selector to trident namespace - part 1
+  lineinfile:
+    path: "{{ openshift_gitops_dir}}/trident/namespace.yaml"
+    regexp: "^  annotations"
+    line: "  annotations:"
+    insertafter: "metadata"
+
+- name: Add open node-selector to trident namespace - part 2
+  lineinfile:
+    path: "{{ openshift_gitops_dir}}/trident/namespace.yaml"
+    regexp: "openshift.io/node-selector"
+    line: '    openshift.io/node-selector: ""'
+    insertafter: "  annotations:"
+
+- name: Add open ArgoCD sync-wave
+  lineinfile:
+    path: "{{ openshift_gitops_dir}}/trident/namespace.yaml"
+    regexp: "argocd.argoproj.io/sync-wave:"
+    line: '    argocd.argoproj.io/sync-wave: "-10"'
+    insertafter: "  annotations:"
+
+- name: Template gitops rolebinding
+  template:
+    src: trident/gitops-rolebinding.yaml.j2
+    dest: "{{ openshift_gitops_dir}}/trident/assets/gitops-rolebinding.yaml"
+
+- name: Template trident clusterrole
+  template:
+    src: trident/trident-clusterrole.yaml.j2
+    dest: "{{ openshift_gitops_dir}}/trident/assets/trident-clusterrole.yaml"
+
+- name: Template trident clusterrolebinding
+  template:
+    src: trident/trident-clusterrolebinding.yaml.j2
+    dest: "{{ openshift_gitops_dir}}/trident/assets/trident-clusterrolebinding.yaml"
+
+- name: Add namespace to deployment
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource namespace.yaml"
+
+#- name: Template backend secret
+#  template:
+#    src: trident/backendconfig-secret.yaml.j2
+#    dest: "{{ openshift_gitops_dir}}/trident/assets/backendconfig-secret-{{ item.name }}.yaml"
+#  loop: "{{ trident_backends }}"
+
+- name: Template tridentorchestrator
+  template:
+    src: trident/tridentorchestrator.yaml.j2
+    dest: "{{ openshift_gitops_dir}}/trident/assets/tridentorchestrator.yaml"
+
+- name: Template backend sealed secret
+  include_tasks: create_sealed_secret.yml
+  vars:
+    secret_template: "{{ lookup('template', 'trident/backendconfig-secret.yaml.j2') | from_yaml }}"
+    apply_to_cluster: false
+    sealed_secret_file: "{{ openshift_gitops_dir}}/trident/assets/backendconfig-secret-{{ item.name }}.yaml"
+  loop: "{{ trident_backends }}"
+
+- name: Template backends
+  template:
+    src: trident/backendconfig.yaml.j2
+    dest: "{{ openshift_gitops_dir}}/trident/assets/backendconfig-{{ item.name }}.yaml"
+  loop: "{{ trident_backends }}"
+
+- name: Template storageclasses
+  template:
+    src: trident/storageclass.yaml.j2
+    dest: "{{ openshift_gitops_dir}}/trident/assets/storageclass-{{ item.name }}.yaml"
+  loop: "{{ trident_backends }}"
+
+- name: Add gitops-rolebinding to deployment
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource assets/gitops-rolebinding.yaml"
+
+- name: Add tridentorchestrator to deployment
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource assets/tridentorchestrator.yaml"
+
+- name: Add trident clusterrole to deploymenr
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource assets/trident-clusterrole.yaml"
+
+- name: Add trident clusterrolebinding to deploymenr
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource assets/trident-clusterrolebinding.yaml"
+
+- name: Add backend secrets to deployment
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource assets/backendconfig-secret-{{ item.name }}.yaml"
+  loop: "{{ trident_backends }}"
+
+- name: Add backends to deployment
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource assets/backendconfig-{{ item.name }}.yaml"
+  loop: "{{ trident_backends }}"
+
+- name: Add storageclasses to deployment
+  shell:
+    chdir: "{{ openshift_gitops_dir}}/trident/"
+    cmd: "kustomize edit add resource assets/storageclass-{{ item.name }}.yaml"
+  loop: "{{ trident_backends }}"
+
+#- name: Find all generated files
+#  find:
+#    path: "{{ openshift_gitops_dir }}/groupsync/assets"
+#    file_type: file
+#  register: groupsync_asset_files
+#
+#- name: Configure kustomization file
+#  template:
+#    src: groupsync/kustomization.yaml.j2
+#    dest: "{{ openshift_gitops_dir }}/groupsync/kustomization.yaml"

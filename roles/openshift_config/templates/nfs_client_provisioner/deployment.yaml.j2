@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ nfs_client_provisioner_name }}
+  labels:
+    app: {{ nfs_client_provisioner_name }}
+  namespace: {{ nfs_client_provisioner_namespace }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ nfs_client_provisioner_name }}
+  template:
+    metadata:
+      labels:
+        app: {{ nfs_client_provisioner_name }}
+    spec:
+      serviceAccountName: nfs-client-provisioner
+      containers:
+        - name: nfs-client-provisioner
+          image: k8s.gcr.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: k8s-sigs.io/nfs-subdir-external-provisioner
+            - name: NFS_SERVER
+              value: {{ nfs_client_provisioner_server }}
+            - name: NFS_PATH
+              value: {{ nfs_client_provisioner_export }}
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: {{ nfs_client_provisioner_server }}
+            path: {{ nfs_client_provisioner_export }}

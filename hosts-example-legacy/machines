@@ -1,0 +1,30 @@
+[bastion]
+bastion.example.com
+
+[bootstrap]
+bootstrap.example.com
+
+[masters]
+master01.example.com
+master02.example.com
+master03.example.com
+
+[infra]
+infra01.example.com
+infra02.example.com
+infra03.example.com
+
+[workers]
+worker01.example.com
+worker02.example.com
+worker03.example.com
+
+# Use the storage group when deploying dedicates storage nodes that will not
+# contain other general purpose application workload. For example when using
+# OpenShift Container Storage. Leave the group defined but empty
+# if not used. It's required during execution, has no effect when empty.
+# It can be combined with other hosts and groups for shared functionality.
+[storage]
+storage01.example.com
+storage02.example.com
+storage03.example.com

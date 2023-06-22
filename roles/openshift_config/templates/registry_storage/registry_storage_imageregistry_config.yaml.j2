@@ -1,0 +1,16 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  managementState: {{ registry_management_state }}
+  replicas: {{ registry_replicas | default('1') }}
+  {% if registry_storage_supports_rwx | default(False) %}
+  rolloutStrategy: RollingUpdate
+  {% else %}
+  rolloutStrategy: Recreate
+  {% endif %}
+  storage:
+    pvc:
+      claim: {{ registry_storage_claim_name | default('') }}

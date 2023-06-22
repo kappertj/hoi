@@ -1,0 +1,8 @@
+{
+  "auths": {
+    "{{ mirror_registry.hostname }}:{{ mirror_registry.port }}": {
+       "auth": "{{ ( mirror_registry.user + ':' + mirror_registry.password ) | b64encode }}",
+       "email": "{{ mirror_registry.user }}@{{ mirror_registry.hostname }}"
+    }
+  }
+}

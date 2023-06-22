@@ -1,0 +1,21 @@
+openshift_components:
+    - apiserver
+    - branding
+    - cicd-operators
+    - console
+    - create_applicationset
+    - deploy_gitops
+    - groupsync
+    - ingress
+    - local_storage
+    - logging
+    - machineconfigs
+    - monitoring
+    - network-policies
+    - nfs_subdir_provisioner
+    - oauth
+    - odf_storage
+    - registry
+    - sealed_secrets
+    - setup_git
+    - trident

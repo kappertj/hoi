@@ -1,0 +1,66 @@
+---
+- name: Create OCS Storage Namespace, Operator Group and Subscription
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'ocs_storage/' + item) | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  loop:
+  - ocs-storage-namespace.yml.j2
+  - ocs-storage-operatorgroup.yml.j2
+  - ocs-storage-operator-subscription.yml.j2
+
+- name: Add storage labels
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Node
+      metadata:
+        name: "{{ item }}"
+        labels: 
+          cluster.ocs.openshift.io/openshift-storage: ""
+          node.ocs.openshift.io/storage: ""
+    merge_type:
+    - strategic-merge
+    - merge
+  loop: "{{ groups['storage'] }}"
+  when: "groups['storage'] | length > 0"
+
+- name: Create a Logical Volumeset and Storage Class
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'ocs_storage/' + item) | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  loop:
+  - ocs-storage-logicalvolumeset.yml.j2
+  - ocs-storage-storageclass.yml.j2
+
+- name: Wait for operator CRDs to appear
+  k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "{{ item }}"
+  register: crds
+  until:
+  - crds.resources is defined
+  - ( crds.resources | length ) > 0
+  retries: 100
+  loop:
+  - storageclusters.ocs.openshift.io
+
+- name: Create Storage Cluster
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'ocs_storage/ocs-storage-storagecluster.yml.j2') | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge

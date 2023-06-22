@@ -1,0 +1,16 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  namespace: metallb-system
+  name: {{ item.name }}
+spec:
+  addresses:
+  {% for address in item.addresses %}
+  - {{ address }}
+  {% endfor %}
+  {% if item.autoassign is defined %}
+  autoAssign: {{ item.autoassign }}
+  {% endif %}

@@ -1,0 +1,32 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-workload-monitoring-config
+  namespace: openshift-user-workload-monitoring
+data:
+  config.yaml: |+
+    prometheus:
+      {% if prometheus_user_retention is defined %}
+      retention: {{ prometheus_user_retention }}
+      {% endif %}
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    {% if prometheus_user_storageclass is defined  and prometheus_user_storage_size is defined %}
+      volumeClaimTemplate:
+        metadata:
+          name: user-metrics
+        spec:
+          storageClassName: {{ prometheus_user_storageclass }}
+          resources:
+            requests:
+              storage: {{ prometheus_user_storage_size }}
+    {% endif  %}
+    {% if groups['infra'] | default([]) | length >= 2 %}
+    prometheusOperator:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    thanosRuler:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    {% endif %}

@@ -1,0 +1,32 @@
+---
+- name: Get SSH privkey for repo
+  slurp:
+    src: "{{ openshift_gitops_repo_ssh_privkey_file }}"
+  register: openshift_gitops_repo_ssh_privkey_content
+  when:
+  - openshift_gitops_repo_ssh_privkey_file is defined
+
+- name: Create sealed secret for repo
+  include_tasks: create_sealed_secret.yml
+  vars:
+    secret_template: "{{ lookup('template', 'create_applicationset/repo.yml.j2') | from_yaml }}"
+    apply_to_cluster: true
+
+- name: Wait for Repo secret to appear
+  k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: v1
+    kind: Secret
+    name: "{{ openshift_gitops_repo_name | default('gitops') }}-repo"
+    namespace: openshift-gitops
+  register: wait_for_repo_secret
+  until:
+  - wait_for_repo_secret.resources is defined
+  - ( wait_for_repo_secret.resources | length ) > 0
+  retries: 100
+
+- name: Create cluster-config ApplicationSet
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'create_applicationset/applicationset.yml.j2') | from_yaml }}"

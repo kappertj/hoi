@@ -1,0 +1,16 @@
+#jinja2: lstrip_blocks: True
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: openshift-gitops
+  namespace: openshift-gitops
+spec:
+  rbac:
+    defaultPolicy: '{{ openshift_gitops_default_role | default('role:readonly') }}'
+    policy: |
+      g, system:cluster-admins, role:admin
+      {% for rbac_group in openshift_gitops_admin_groups | default([]) %}
+      g, {{ rbac_group }}, role:admin
+      {% endfor %}
+    scopes: '[groups]'
+

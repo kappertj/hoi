@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-subdir-provisioner
+  namespace: openshift-nfs-subdir-provisioner
+spec:
+  template:
+    spec:
+      containers:
+        - name: nfs-client-provisioner
+          env:
+            - name: NFS_SERVER
+              value: {{ nfs_subdir_provisioner_server }}
+            - name: NFS_PATH
+              value: {{ nfs_subdir_provisioner_export }}
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: {{ nfs_subdir_provisioner_server }}
+            path: {{ nfs_subdir_provisioner_export }}

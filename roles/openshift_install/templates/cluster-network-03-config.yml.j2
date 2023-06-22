@@ -1,0 +1,21 @@
+#jinja2: lstrip_blocks: True
+apiVersion: operator.openshift.io/v1
+kind: Network
+metadata:
+  name: cluster
+spec:
+  clusterNetwork:
+    {{ openshift_clusternetworks | to_nice_yaml(indent=2) | trim | indent(4) }}
+  serviceNetwork:
+    {{ openshift_servicenetworks | to_nice_yaml(indent=2) | trim | indent(4) }}
+  defaultNetwork:
+    type: OVNKubernetes
+    ovnKubernetesConfig:
+      mtu: {{ ovnkubernetes_mtu | default(1400) }}
+      genevePort: {{ ovnkubernetes_geneveport | default(6081) }}
+      {% if enable_ipsec %}
+      ipsecConfig: {}
+      {% endif %}
+  {% if disable_multus | default(False) %}
+  disableMultiNetwork: true
+  {% endif %}

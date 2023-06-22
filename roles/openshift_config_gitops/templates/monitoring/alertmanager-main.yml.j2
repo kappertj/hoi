@@ -1,0 +1,10 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-main
+  namespace: openshift-monitoring
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    {{ alertmanager_config | to_nice_yaml | indent(width=4 ) }}

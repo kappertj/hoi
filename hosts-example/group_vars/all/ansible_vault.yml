@@ -1,0 +1,13 @@
+---
+# This ansible vault is for demonstration purposes only. 
+# Encrypt this vault with ansible-vault encrypt ansible_vault.yml
+
+# OpenID connect settings. These settings should be part of an ansible vault
+encrypted_openid_clientid: "clientid Azure"
+encrypted_openid_tenantid: "tentant id"
+encrypted_openid_issuer: "https://login.microsoftonline.com/{{ openid_tenantid }}"
+encrypted_openid_client_secret: "Name of the openid_client_secret"
+
+# vCenter credentials
+encrypted_vcenter_username: "dummy"
+encrypted_vcenter_password: "dummy"

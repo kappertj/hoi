@@ -1,0 +1,9 @@
+- name: Prompt to continue
+  pause:
+    prompt: |
+      For all systems that have their `install_method` set to `iso` grab
+      the generated iso out of the `/var/www/html` directory on {{ bastion_host }}
+      and boot the required system with that iso. These ISOs are also available over
+      HTTP at http://{{ bastion_external_hostname | default(bastion_host) }}/<HOSTNAME>.iso
+
+      Press <Enter> to continue

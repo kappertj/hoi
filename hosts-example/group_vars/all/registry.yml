@@ -1,0 +1,4 @@
+registry_storage_claim_name: myregistry
+registry_storage_claim_storageclass: odf-storagecluster-cephfs
+registry_storage_claim_size: 100Gi
+registry_storage_supports_rwx: true

@@ -1,0 +1,9 @@
+---
+- name: Install and Sync OpenShift Mirror Registry
+  hosts:
+  - registry
+  gather_facts: no
+  become: true
+  serial: 20
+  roles:
+  - mirror-registry

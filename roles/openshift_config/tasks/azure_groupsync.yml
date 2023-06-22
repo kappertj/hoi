@@ -1,0 +1,37 @@
+- name: Deploy group-sync Objects
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'azure_groupsync/' + item) | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  loop:
+  - group-sync-namespace.yml.j2
+  - group-sync-operatorgroup.yml.j2
+  - group-sync-subscription.yml.j2
+  - azure-group-sync-secret.yml.j2
+  - azure-cluster-admin-rolebinding.yml.j2
+
+- name: Wait for operator CRDs to appear
+  k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "{{ item }}"
+  register: crds
+  until: ( crds.resources | length ) > 0
+  retries: 100
+  loop:
+  - groupsyncs.redhatcop.redhat.io
+
+- name: Deploy group-sync Objects
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'azure_groupsync/' + item) | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  loop:
+  - group-sync.yml.j2

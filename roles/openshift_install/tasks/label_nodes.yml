@@ -1,0 +1,9 @@
+---
+- name: Set node labels
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'node_labels.yml.j2') | from_yaml }}"
+    apply: true
+  delegate_to: "{{ bastion_host }}"
+  when: "'bootstrap' not in group_names"

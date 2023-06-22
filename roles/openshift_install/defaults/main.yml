@@ -1,0 +1,47 @@
+install_flavour: ocp
+
+openshift_ignition_dir: /opt/openshift_files/{{ cluster }}/ignition
+openshift_installer_dir: /opt/openshift_files/{{ cluster }}/installer
+openshift_nmconnections_dir: /opt/openshift_files/{{ cluster }}/nmconnections
+openshift_installer_binary: "{{ openshift_installer_dir }}/openshift-install"
+filetranspile_url: https://raw.githubusercontent.com/ashcrow/filetranspiler/master/filetranspile
+filetranspile_binary: "{{ openshift_installer_dir }}/filetranspile"
+coreos_installer:
+  url: https://mirror.openshift.com/pub/openshift-v4/clients/coreos-installer/v0.15.0-2/coreos-installer
+
+openshift_servicenetworks:
+- 172.30.0.0/16
+openshift_clusternetworks:
+- cidr: 10.128.0.0/16
+  hostPrefix: 23
+
+# OpenShiftSDN or OVNKubernetes
+openshift_networktype: OpenShiftSDN
+enable_ipsec: false
+
+openshift_manifest_customizations:
+- file: cluster-scheduler-02-config.yml
+  regexp: '^  mastersSchedulable:'
+  line: '  mastersSchedulable: false'
+
+openshift_kubeconfig: "{{ openshift_ignition_dir }}/auth/kubeconfig"
+oc_command: "/usr/local/bin/oc --kubeconfig={{ openshift_kubeconfig }}"
+coreos_installer_command: "{{ openshift_installer_dir }}/coreos-installer"
+nm_initrd_generator_command: /usr/libexec/nm-initrd-generator
+
+openshift_components:
+- iscsi_pvs
+
+coreos_iso_output_dir: /var/www/html
+coreos_iso_path: /var/www/html/coreos
+
+bonding_opts:
+- "mode=802.3ad"
+- "lacp_rate=0"
+- "miimon=100"
+- "updelay=1000"
+- "downdelay=1000"
+
+install_version_major_minor: "{{ install_version | regex_replace('^([0-9]+\\.[0-9]+).*$', '\\1') }}"
+
+ilo_version: 4

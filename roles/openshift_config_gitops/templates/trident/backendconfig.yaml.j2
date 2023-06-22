@@ -1,0 +1,13 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: trident.netapp.io/v1
+kind: TridentBackendConfig
+metadata:
+  name: backend-{{ item.name }}
+  namespace: trident
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  credentials:
+    name: backend-{{ item.name }}
+  {{ item.data | to_nice_yaml(indent=2) | trim | indent(2) }}

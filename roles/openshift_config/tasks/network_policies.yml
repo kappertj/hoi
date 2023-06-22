@@ -1,0 +1,44 @@
+---
+- name: Get OpenShift Infra nodes
+  k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    kind: Node
+    label_selectors:
+    - node-role.kubernetes.io/infra=
+  register: openshift_infra_nodes
+
+- name: Update project-request template
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'network_policies/project-request-template.yaml.j2') | from_yaml }}"
+
+- name: Mark project-request template as default for new projects
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'network_policies/project-config.yaml.j2') | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+
+
+- name: label "default" namespace as ingress as well
+  # See: https://access.redhat.com/solutions/4620971
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    merge_type:
+    - strategic-merge
+    - merge
+    definition: |
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        labels:
+          network.openshift.io/policy-group: ingress
+        name: default
+  when: openshift_networktype == "OpenShiftSDN"
+      
+
+

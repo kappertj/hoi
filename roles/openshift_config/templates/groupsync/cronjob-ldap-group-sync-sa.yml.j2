@@ -1,0 +1,7 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  namespace: "{{ groupsync_cronjob_namespace }}"
+  name: ldap-group-syncer
+  labels:
+    template: "cronjob-ldap-group-sync"

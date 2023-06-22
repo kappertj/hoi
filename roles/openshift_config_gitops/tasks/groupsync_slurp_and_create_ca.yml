@@ -1,0 +1,13 @@
+- name: Slurp ca content
+  slurp:
+    src: "{{ item.cafile }}"
+  register: groupsync_ca_content
+
+- name: Configure oauth bind passwords sealed-secret
+  include_tasks: create_sealed_secret.yml
+  vars:
+    secret_template: "{{ lookup('template', 'groupsync/groupsync-ca.yml.j2') | from_yaml }}"
+    apply_to_cluster: false
+    sealed_secret_file: "{{ openshift_gitops_dir }}/groupsync/assets/groupsync-ca-{{ item.name }}.yaml"
+  when:
+  - item.type | default('LDAP') == 'LDAP'

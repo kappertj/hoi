@@ -1,0 +1,5 @@
+airgapped: false
+mirror: 
+  url: example-repo-server.
+  port: 8443
+  repo: ocp4/openshift4

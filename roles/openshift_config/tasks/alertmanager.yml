@@ -1,0 +1,7 @@
+---
+- name: Configure Alertmanager
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'alertmanager/alertmanager-main.yml.j2') | from_yaml }}"
+

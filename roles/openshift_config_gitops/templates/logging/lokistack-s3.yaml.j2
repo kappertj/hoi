@@ -1,0 +1,12 @@
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: lokistack-s3
+  namespace: openshift-logging
+spec:
+  additionalConfig:
+    bucketclass: noobaa-default-bucket-class
+  generateBucketName: lokistack-s3
+  storageClassName: openshift-storage.noobaa.io

@@ -1,0 +1,2 @@
+#cicd_operators_install_tekton: true
+#cicd_operators_install_knative: true

@@ -1,0 +1,12 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: v1
+kind: ConfigMap
+{% if custom_logo_file is defined %}
+data:
+  custom-logo.svg: |
+    {{ lookup('file', custom_logo_file) | indent(width=4, indentfirst=False) }}
+{% endif %}
+metadata:
+  creationTimestamp: null
+  name: custom-logo
+  namespace: openshift-config

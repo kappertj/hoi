@@ -1,0 +1,5 @@
+install_flavour: ocp
+install_version: "4.10"
+openshift_pullsecret: "{{ lookup('file', '/path/to/pull-secret/json/on/ansible-controller') }}"
+disable_remote_health: false
+openshift_coreos_sshpubkey: "{{ lookup('file', '/home/alice/.ssh/id_rsa.pub') }}"

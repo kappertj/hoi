@@ -1,0 +1,188 @@
+---
+- name: Get contents of custom_ca_file
+  slurp:
+    src: "{{ custom_ca_file }}"
+  register: custom_ca_file_contents
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - create_new_cluster is defined
+  - custom_ca_file is defined
+
+- name: Disable remote health reporting
+  set_fact:
+    openshift_pullsecret: |
+      {% set _=openshift_pullsecret.auths.__delitem__("cloud.openshift.com") %}
+      {{ openshift_pullsecret }}
+  when:
+  - create_new_cluster is defined
+  - disable_remote_health | default(false)
+
+- name: Template out install-config.yml
+  template:
+    src: install-config.yml.j2
+    dest: "{{ openshift_ignition_dir }}/install-config.yaml"
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - create_new_cluster is defined
+  - inventory_hostname == ansible_play_hosts_all[0]
+
+- name: Delete old (stale) install state file
+  file:
+    path: "{{ openshift_ignition_dir }}/.openshift_install_state.json"
+    state: absent
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - create_new_cluster is defined
+  - inventory_hostname == ansible_play_hosts_all[0]
+
+- name: Run openshift-install to create manifests
+  command: "{{ openshift_installer_binary }} --dir={{ openshift_ignition_dir }} create manifests"
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - create_new_cluster is defined
+  - inventory_hostname == ansible_play_hosts_all[0]
+
+- name: Update configs
+  lineinfile:
+    path: "{{ openshift_ignition_dir }}/manifests/{{ item.file }}"
+    regexp: "{{ item.regexp | default(omit) }}"
+    line: "{{ item.line }}"
+  loop: "{{ openshift_manifest_customizations }}"
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - create_new_cluster is defined
+  - inventory_hostname == ansible_play_hosts_all[0]
+
+- name: Add IPSec config
+  template:
+    src: cluster-network-03-config.yml.j2
+    dest: "{{ openshift_ignition_dir }}/manifests/cluster-network-03-config.yml"
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - enable_ipsec
+  - openshift_networktype == 'OVNKubernetes'
+  - create_new_cluster is defined
+  - inventory_hostname == ansible_play_hosts_all[0]
+
+- name: Add keepalived config
+  template:
+    src: cluster-infrastructure-02-config.yml.j2
+    dest: "{{ openshift_ignition_dir }}/manifests/cluster-infrastructure-02-config.yml"
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - api_vip is defined
+  - ingress_vip is defined
+  - create_new_cluster is defined
+  - inventory_hostname == ansible_play_hosts_all[0]
+
+- name: breaky breaky
+  assert:
+    that: false
+    fail_msg: Breaking on user request
+  run_once: true
+  when: break_early is defined
+
+- name: Run openshift-install to create ignition files
+  command: "{{ openshift_installer_binary }} --dir={{ openshift_ignition_dir }} create ignition-configs"
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+  - create_new_cluster is defined
+  - inventory_hostname == ansible_play_hosts_all[0]
+
+- name: breaky breaky
+  assert:
+    that: false
+    fail_msg: Breaking on user request
+  run_once: true
+  when: break is defined
+
+- name: Create tempdir
+  file:
+    path: "{{ installer_tmpdir }}"
+    state: directory
+  delegate_to: "{{ bastion_host }}"
+  when: installer_tmpdir is defined
+
+- block:
+  - name: Create tempdir for host
+    tempfile:
+      path: "{{ installer_tmpdir | default(omit) }}"
+      state: directory
+    register: ignitiontempdir
+    delegate_to: "{{ bastion_host }}"
+
+  - name: Ensure subdirectories exist
+    file:
+      path: "{{ item }}"
+      state: directory
+      recurse: yes
+    loop:
+    - "{{ ignitiontempdir.path }}/etc/sysconfig/network-scripts"
+    - "{{ ignitiontempdir.path }}/etc/NetworkManager/system-connections"
+    delegate_to: "{{ bastion_host }}"
+
+  - name: Template optional NetWorkManger configuration files
+    shell: /usr/libexec/nm-initrd-generator -c {{ ignitiontempdir.path }}/etc/NetworkManager/system-connections -- {{ coreos_installation_args }}
+    delegate_to: "{{ bastion_host }}"
+    when:
+    - (create_nmconnection_files | default(False)) == True
+
+  - name: template auxiliary network-config
+    template:
+      src: "{{ item.template }}"
+      dest: "{{ item.path }}"
+    delegate_to: "{{ bastion_host }}"
+    loop:
+    - path: "{{ ignitiontempdir.path }}/etc/hostname"
+      template: hostname.j2
+
+  - name: Set base ignition for workers
+    set_fact:
+      base_ignition_file: worker.ign
+    when: "('workers' in group_names) or ('infra' in group_names) or ('storage' in group_names)"
+
+  - name: Set base ignition for masters
+    set_fact:
+      base_ignition_file: master.ign
+    when: "'masters' in group_names"
+
+  - name: Set base ignition for bootstrap
+    set_fact:
+      base_ignition_file: bootstrap.ign
+    when: "'bootstrap' in group_names"
+
+  - name: Assert that base_ignition_file is set
+    assert:
+      that: base_ignition_file in ['master.ign', 'worker.ign', 'bootstrap.ign']
+      fail_msg: |
+        No base_ignition_file configured for {{ inventory_hostname }}
+        Make sure that {{ inventory_hostname }} is a part of one of these groups:
+        - storage
+        - infra
+        - workers
+        - masters
+        - bootstrap
+      success_msg: |
+        {{ inventory_hostname }} is configured to use {{ base_ignition_file }} as
+        the basis for its Ignition config.
+
+  - name: Transpile meuk into webserver
+    command: "{{ filetranspile_binary }} -p -i {{ openshift_ignition_dir }}/{{ base_ignition_file }} -f {{ ignitiontempdir.path }} -o /var/www/html/{{ inventory_hostname }}.ign"
+    delegate_to: "{{ bastion_host }}"
+
+  always:
+  - name: cleanup tempdir
+    file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+    - "{{ ignitiontempdir.path }}"
+    delegate_to: "{{ bastion_host }}"

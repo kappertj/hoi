@@ -1,0 +1,29 @@
+---
+- name: install or upgrade mirror quay
+  include_tasks:
+    file: install.yml
+    apply:
+      tags:
+      - install
+  tags:
+  - install
+  when:
+  - mirror_registry_install
+
+- name: Sync content
+  include_tasks:
+    file: sync.yml
+    apply:
+      tags:
+      - sync
+  tags:
+  - sync
+
+- name: Process results
+  include_tasks:
+    file: process_results.yml
+    apply:
+      tags:
+      - process_results
+  tags:
+  - process_results

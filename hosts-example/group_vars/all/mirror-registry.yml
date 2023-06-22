@@ -1,0 +1,8 @@
+mirror_registry_cert:
+  certfile: /opt/openshift_files/certs/{{ cluster }}/{{ mirror_registry.hostname }}.fullchain.pem
+  keyfile: /opt/openshift_files/certs/{{ cluster }}/{{ mirror_registry.hostname }}.key
+  #key_content: xxxxxx
+  #cert_content: xxxxxx
+
+mirror_registry_download_dir: /opt/openshift_files/registry
+mirror_registry_dir:

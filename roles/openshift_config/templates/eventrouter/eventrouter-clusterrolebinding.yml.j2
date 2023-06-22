@@ -1,0 +1,11 @@
+apiVersion: authorization.openshift.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: event-reader-binding
+roleRef:
+  kind: ClusterRole
+  name: event-reader
+subjects:
+- kind: ServiceAccount
+  name: eventrouter
+  namespace: openshift-logging

@@ -1,0 +1,44 @@
+---
+- name: Ensure gitops directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: monitoring
+
+- name: Generate cluster-monitoring Config ConfigMap
+  template:
+    src: "monitoring/cluster-monitoring-config.yml.j2"
+    dest: "{{ openshift_gitops_dir }}/monitoring/assets/cluster-monitoring-config.yaml"
+
+- name: Generate user-workload-monitoring Config ConfigMap
+  template:
+    src: "monitoring/user-workload-monitoring-config.yml.j2"
+    dest: "{{ openshift_gitops_dir }}/monitoring/assets/user-workload-monitoring-config.yaml"
+  when:
+  - monitoring_user_workload_enabled
+
+# Sealed Secrets do not want to overwrite existing secrets, unless they are
+# annotated as being managed by the SealedSecrets operator. Need some way to
+# use a ArgoCD sync-hook or the like to annotate that secret before the
+# sealed-secrets is generated
+#- name: Configure AlertManager
+#  include_tasks: create_sealed_secret.yml
+#  vars:
+#    secret_template: "{{ lookup('template', 'monitoring/alertmanager-main.yml.j2') | from_yaml }}"
+#    apply_to_cluster: false
+#    sealed_secret_file: "{{ openshift_gitops_dir }}/monitoring/assets/alertmanager-main.yaml"
+#  when:
+#  - alertmanager_config is defined
+
+- name: Configure AlertManager
+  template:
+    src: monitoring/alertmanager-main.yml.j2
+    dest: "{{ openshift_gitops_dir }}/monitoring/assets/alertmanager-main.yaml"
+  when:
+  - alertmanager_config is defined
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: monitoring

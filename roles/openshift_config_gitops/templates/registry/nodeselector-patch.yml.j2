@@ -1,0 +1,10 @@
+#jinja2: lstrip_blocks: True
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+{% if groups['infra'] | default('[]') | length > 0 %}
+  nodeSelector:
+    node-role.kubernetes.io/infra: ""
+{% endif %}

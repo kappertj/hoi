@@ -1,0 +1,9 @@
+#jinja2: lstrip_blocks: True
+
+- size_gb: {{ vmware.disk }}
+  type: {{ install_dev_type | default('thin') }}
+{% if vmware.datastore is defined or vcenters[vmware.vcenter].datastore is defined %}
+  datastore: {{ vmware.datastore | default(vcenters[vmware.vcenter].datastore) }}
+{% else %}
+  autoselect_datastore: true
+{% endif %}

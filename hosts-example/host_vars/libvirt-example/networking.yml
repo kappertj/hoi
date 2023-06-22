@@ -1,0 +1,11 @@
+network_config:
+- device: enp1s0
+  mac: "52:54:00:00:01:01"
+  address: 192.168.0.100
+  netmask: 255.255.255.0
+  gateway: 192.168.0.254
+  is_default_gateway: true
+  dns:
+  - 192.168.0.1
+  - 8.8.8.8
+  bridge: br0

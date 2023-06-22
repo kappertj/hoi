@@ -1,0 +1,45 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  annotations:
+    cluster.ocs.openshift.io/local-devices: 'true'
+    uninstall.ocs.openshift.io/cleanup-policy: delete
+    uninstall.ocs.openshift.io/mode: graceful
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "5"
+  name: {{ odf_prefix | default('odf') }}-storagecluster
+  namespace: openshift-storage
+spec:
+  encryption: {}
+  externalStorage: {}
+  {% if groups['storage'] | map('extract', hostvars, 'extra_node_labels') | json_query('[*]."topology.kubernetes.io/zone"') | default([], true) | unique | length  < 3 %}
+  flexibleScaling: True
+  {% endif %}
+  managedResources:
+    cephBlockPools: {}
+    cephFilesystems: {}
+    cephObjectStoreUsers: {}
+    cephObjectStores: {}
+  monDataDirHostPath: /var/lib/rook
+  labelSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/storage
+        operator: Exists
+  storageDeviceSets:
+    - config: {}
+      count: {{ odf_storage_cluster_disk_count }}
+      dataPVCTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: '1'
+          storageClassName: {{ odf_prefix | default('odf') }}-local-storage
+          volumeMode: Block
+        status: {}
+      name: {{ odf_prefix | default('odf') }}-deviceset-{{ odf_prefix | default('odf') }}-local-storage
+      placement: {}
+      replica: {{ odf_replica }}
+      resources: {}

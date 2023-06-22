@@ -1,0 +1,33 @@
+#jinja2: lstrip_blocks: True
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: {{ router.name }}
+  namespace: openshift-ingress-operator
+spec:
+  {% if router.force_loadbalancer | default(false) %}
+  endpointPublishingStrategy:
+    type: LoadBalancerService
+  {% endif %}
+  {% if router.domain is defined %}
+  domain: {{ router.domain }}
+  {% endif %}
+  {% if (router.certfile is defined or router.cert_content is defined) and (router.keyfile is defined or router.key_content is defined) %} 
+  defaultCertificate:
+    name: custom-router-certs-{{ router.name }}
+  {% endif %}
+  {% if router.nodeplacement is defined %}
+  nodePlacement:
+    {{ router.nodeplacement | to_nice_yaml(indent=2) | trim | indent(4) }}
+  {% endif %}
+  {% if router.replicas is defined %}
+  replicas: {{ router.replicas }}
+  {% endif %}
+  {% if router.namespaceselector is defined %}
+  namespaceSelector:
+    {{ router.namespaceselector | to_nice_yaml(indent=2) | trim | indent(4) }}
+  {% endif %}
+  {% if router.routeselector is defined %}
+  routeSelector:
+    {{ router.routeselector | to_nice_yaml(indent=2) | trim | indent(4) }}
+  {% endif %}

@@ -1,0 +1,12 @@
+---
+- name: Add subscription for OpenShift GitOps Operator
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', item) | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  loop:
+  - deploy_gitops/subscription.yml.j2
+

@@ -1,0 +1,32 @@
+all:
+ocp:
+  children:
+    bastion:
+      hosts:
+        bastion.example.com
+    mirror:
+      hosts:
+        mirror.example.com
+    bootstrap:
+      hosts:
+        bootstrap.example.com:
+    masters:
+      hosts:
+        master01.example.com:
+        master02.example.com:
+        master03.example.com:
+    infra:
+      hosts:
+        infra01.example.com:
+        infra02.example.com:
+        infra03.example.com:
+    workers:
+      hosts:
+        worker01.example.com:
+        worker02.example.com:
+        worker03.example.com:
+    storage:
+      hosts:
+        storage01.example.com:
+        storage02.example.com:
+        storage03.example.com:

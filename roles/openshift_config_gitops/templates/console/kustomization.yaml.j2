@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- {{ openshift_gitops_upstream_base }}/console
+{% for file in console_asset_files.files %}
+- {{ file.path | replace(openshift_gitops_dir + '/console/', '') }} 
+{% endfor %}
+
+{% if console_patch_files.files | length > 0 %}
+patches:
+{% for file in console_patch_files.files %}
+- path: {{ file.path | replace(openshift_gitops_dir + '/console/', '') }} 
+{% endfor %}
+{% endif %}
+
+{% if (custom_logo_file is defined) and ("branding" in openshift_components) %}
+configMapGenerator:
+- name: custom-logo
+  namespace: openshift-config
+  options:
+    disableNameSuffixHash: true
+    annotations:
+      argocd.argoproj.io/sync-options: Replace=true
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+  files:
+  - files/custom-logo.svg
+{% endif %}

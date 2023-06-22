@@ -1,0 +1,5 @@
+---
+- name: restart quay service
+  service:
+    name: quay-app.service
+    state: restarted

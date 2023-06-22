@@ -1,0 +1,118 @@
+---
+- name: set libvirt installer args
+  set_fact:
+    extra_install_args: "--install kernel=http://{{ bastion_host }}/coreos/{{ install_version }}/{{ coreos_urls.kernel.url | basename }},initrd=http://{{ bastion_host }}/coreos/{{ install_version }}/{{ coreos_urls.initramfs.url | basename }},kernel_args_overwrite=yes,kernel_args=\"{{ coreos_installation_args }}\" --wait"
+  when:
+  - install_version is version('4.10', '<')
+
+- name: set libvirt installer args
+  set_fact:
+    extra_install_args: "--install kernel=http://{{ bastion_host }}/coreos/{{ install_version }}/{{ coreos_urls.kernel.url | basename }},initrd=http://{{ bastion_host }}/{{ inventory_hostname}}.initramfs,kernel_args_overwrite=yes,kernel_args=\"{{ coreos_installation_args }}\" --wait"
+  when:
+  - install_version is version('4.10', '>=')
+
+- name: Get all VMS
+  virt:
+    command: list_vms
+  become: true
+  delegate_to: "{{ virt_host }}"
+  register: all_vms
+
+- name: Bail if VM already present and force_vm_install=false
+  assert:
+    that: (inventory_hostname not in all_vms.list_vms) or (force_vm_install | default(False))
+
+- name: Ensure virt-install is present
+  dnf:
+    name:
+    - virt-install
+    - cockpit
+    - cockpit-machines
+    - genisoimage
+    state: present
+  become: true
+  delegate_to: "{{ virt_host }}"
+
+- name: Ensure services are started
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+  - firewalld
+  - cockpit.socket
+  become: true
+  delegate_to: "{{ virt_host }}"
+
+- name: Ensure firewall is opened up
+  firewalld:
+    service: "{{ item.service | default(omit) }}"
+    port: "{{ item.port | default(omit) }}"
+    state: enabled
+    permanent: yes
+    immediate: yes
+  loop:
+  - service: cockpit
+  become: true
+  delegate_to: "{{ virt_host }}"
+
+- name: Download base image
+  get_url:
+    url: "{{ base_image_url }}"
+    dest: /var/lib/libvirt/images/
+    checksum: "{{ base_image_checksum | default(omit) }}"
+  become: true
+  delegate_to: "{{ virt_host }}"
+  when:  base_image_url is defined
+  tags:
+  - download
+
+- name: stop VM
+  virt:
+    name: "{{ inventory_hostname }}"
+    state: destroyed
+  ignore_errors: true
+  become: true
+  delegate_to: "{{ virt_host }}"
+  when: inventory_hostname in all_vms.list_vms
+
+- name: undefine VM
+  virt:
+    name: "{{ inventory_hostname }}"
+    command: undefine
+  ignore_errors: true
+  become: true
+  delegate_to: "{{ virt_host }}"
+  when: inventory_hostname in all_vms.list_vms
+
+- name: Create vm overlay
+  command: "qemu-img create -f qcow2 -b /var/lib/libvirt/images/{{ base_image_url | basename }} /var/lib/libvirt/images/{{ inventory_hostname }}.qcow2"
+  become: true
+  delegate_to: "{{ virt_host }}"
+  when: base_image_url is defined
+
+- name: Create vm disk
+  command: "qemu-img create -f qcow2 /var/lib/libvirt/images/{{ inventory_hostname }}.qcow2 {{ image_size }}"
+  become: true
+  delegate_to: "{{ virt_host }}"
+  when: (image_size is defined) and (base_image_url is not defined)
+
+- name: Create extra disks
+  command: "qemu-img create -f qcow2 /var/lib/libvirt/images/{{ inventory_hostname }}-{{ item.name }}.qcow2 {{ item.size }}"
+  loop: "{{ extra_disks | default([]) }}"
+  become: true
+  delegate_to: "{{ virt_host }}"
+
+- name: Start virt-install
+  command: "virt-install -n {{ inventory_hostname }} --memory={{ virt_memory }} --vcpus={{ virt_vcpus }} --import --disk=/var/lib/libvirt/images/{{ inventory_hostname }}.qcow2 {% for disk in extra_disks | default([]) %} --disk=/var/lib/libvirt/images/{{ inventory_hostname }}-{{ disk.name }}.qcow2 {% endfor %} {% for bridge in network_config %}{% if bridge.slaves is defined %}{% for slave in bridge.slaves %} --network bridge={{ slave.bridge }}{% if slave.mac is defined %},mac={{ slave.mac }}{% endif %} {% endfor %}{% else %} --network bridge={{ bridge.bridge }}{% if bridge.mac is defined %},mac={{ bridge.mac }}{% endif %}{% endif %}{% endfor %} --os-variant={{ virt_variant | default('rhel8.1') }} --noautoconsole --graphics=spice {{ extra_install_args | default('') }}"
+  become: true
+  delegate_to: "{{ virt_host }}"
+  async: 7200
+  poll: 5
+
+- name: Set domain to autostart or not
+  virt:
+    name: "{{ inventory_hostname }}"
+    autostart: "{{ virt_autostart | default(True) }}"
+  become: true
+  delegate_to: "{{ virt_host }}"

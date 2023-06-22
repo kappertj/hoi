@@ -1,0 +1,30 @@
+#jinja2: lstrip_blocks: True
+apiVersion: logging.openshift.io/v1
+kind: LogForwarding
+metadata:
+  annotations:
+  name: instance
+  namespace: openshift-logging
+spec:
+  disableDefaultForwarding: true
+  outputs:
+  - endpoint: elasticsearch.openshift-logging.svc:9200
+    name: elasticsearch
+    secret:
+      name: fluentd
+    type: elasticsearch
+  pipelines:
+  - inputSource: logs.app
+    name: container-logs
+    outputRefs:
+    - elasticsearch
+  {% if clusterlogging_forward_audit | default(false) %}
+  - inputSource: logs.audit
+    name: audit-logs
+    outputRefs:
+    - elasticsearch
+  {% endif %}
+  - inputSource: logs.infra
+    name: infra-logs
+    outputRefs:
+    - elasticsearch

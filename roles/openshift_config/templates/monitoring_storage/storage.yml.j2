@@ -1,0 +1,18 @@
+prometheusK8s:
+  volumeClaimTemplate:
+    metadata:
+      name: metrics
+    spec:
+      storageClassName: {{ prometheus_storageclass }}
+      resources:
+        requests:
+          storage: {{ prometheus_storage_size }}
+alertmanagerMain:
+  volumeClaimTemplate:
+    metadata:
+      name: alerts
+    spec:
+      storageClassName: {{ alertmanager_storageclass }}
+      resources:
+        requests:
+          storage: {{ alertmanager_storage_size }}

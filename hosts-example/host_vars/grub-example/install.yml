@@ -1,0 +1,2 @@
+install_dev: sda
+install_method: grub

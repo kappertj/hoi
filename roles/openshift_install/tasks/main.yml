@@ -1,0 +1,65 @@
+---
+- name: Include task preq_reqs
+  include_tasks: pre_reqs.yml
+
+- name: Include task register_kernel_args
+  include_tasks: register_kernel_args.yml
+
+- name: Include task create_ignitionfile
+  include_tasks: create_ignitionfile.yml
+
+- name: Include template NMConnections
+  include_tasks: template_nmconnection_files.yml
+  when:
+  - install_version is version('4.10', '>=')
+
+- name: Include create CoreOS initramfs
+  include_tasks: create_coreos_installer_initramfs.yml
+  when:
+  - install_method in ['libvirt', 'grub']
+  - install_version is version('4.10', '>=')
+
+- name: Create custom CoreOS installer ISO
+  include_tasks: create_coreos_installer_iso.yml
+  when:
+  - install_method in ['ilo', 'vmware', 'iso']
+  - install_version is version('4.10', '>=')
+
+- name: Include task create_iso
+  include_tasks: create_iso.yml
+  when:
+  - install_method in ['ilo', 'vmware']
+  - install_version is version('4.10', '<')
+
+- name: Include task ilo
+  include_tasks: ilo.yml
+  when: install_method == 'ilo' and (ilo_boot_from_url | default(False)) == False
+
+- name: Include task ilo_boot_from_url
+  include_tasks: ilo_boot_from_url.yml
+  when: install_method == 'ilo' and (ilo_boot_from_url | default(False)) == True
+
+- name: Include task create_vmware_vm
+  include_tasks: create_vmware_vm.yml
+  when: install_method == 'vmware'
+
+- name: Include task libvirt_install.yml
+  include_tasks: libvirt_install.yml
+  when: install_method == 'libvirt'
+
+- name: Include task grub_install
+  include_tasks: grub_install.yml
+  when: install_method == 'grub'
+
+- name: Wait for User Input
+  include_tasks: wait_for_user_input.yml
+  when: install_method == 'iso'
+
+- name: Include task wait_for_cluster.yml
+  include_tasks: wait_for_cluster.yml
+
+- name: Include task label_nodes
+  include_tasks: label_nodes.yml
+
+- name: Include task machineconfigpools
+  include_tasks: machineconfigpools.yml

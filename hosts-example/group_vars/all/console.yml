@@ -1,0 +1,1 @@
+#custom_console_url: "console.{{ cluster }}.{{ base_domain }}"

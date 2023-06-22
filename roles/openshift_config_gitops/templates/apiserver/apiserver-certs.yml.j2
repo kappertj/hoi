@@ -1,0 +1,12 @@
+apipiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: "{{ apiserver_certificate.name }}"
+  namespace: openshift-config
+stringData:
+  tls.crt: |
+    {{ apiserver_certificate_cert_content | indent(width=4) }}
+    {{ apiserver_certificate_key_content | indent(width=4) }}
+  tls.key: |
+    {{ apiserver_certificate_key_content | indent(width=4) }}

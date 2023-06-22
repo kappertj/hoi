@@ -1,0 +1,19 @@
+[connection]
+id={{ item.device }}
+uuid={{ 99999999 | random | to_uuid }}
+type=ethernet
+interface-name={{ item.device }}
+autoconnect-priority=10
+
+{% if item.mac is defined %}
+[ethernet]
+mac-address={{ item.mac }}
+{% endif %}
+
+[ipv4]
+method=manual
+address1={{ (item.address + '/' + item.netmask) | ipaddr('cidr') }}
+{% if item.is_default_gateway | default(False) %}gateway={{ item.gateway }}{% endif %}
+
+dns={{ item.dns | join(';') }}
+dns-search={{ base_domain }}

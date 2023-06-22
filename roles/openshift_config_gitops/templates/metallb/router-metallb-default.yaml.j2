@@ -1,0 +1,27 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    ingresscontroller.operator.openshift.io/owning-ingresscontroller: default
+  name: router-metallb-default
+  namespace: openshift-ingress
+spec:
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Cluster
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: https
+  selector:
+    ingresscontroller.operator.openshift.io/deployment-ingresscontroller: default
+  sessionAffinity: ClientIP
+  type: LoadBalancer
+  {% if metallb.default_ingress_ip is defined %}
+  loadBalancerIP: {{ metallb.default_ingress_ip }}
+  {% endif %}

@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitops-cluster-roles
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: {{ openshift_gitops_upstream_base }}
+    targetRevision: {{ openshift_gitops_upstream_ref | default('HEAD') }}
+    path: gitops-clusterops-roles
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      selfHeal: true
+    retry:
+      limit: 5

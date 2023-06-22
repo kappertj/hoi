@@ -1,0 +1,13 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: ImagePruner
+metadata:
+  name: cluster
+spec:
+  failedJobsHistoryLimit: 3
+  keepTagRevisions: 3
+  schedule: "{{ imagepruner_schedule | default('13 3 * * *') }}"
+  successfulJobsHistoryLimit: 3
+  ignoreInvalidImageReferences: true
+  suspend: false
+

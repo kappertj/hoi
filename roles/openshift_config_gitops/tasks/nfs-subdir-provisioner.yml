@@ -1,0 +1,22 @@
+---
+- name: Ensure gitops directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: nfs-subdir-provisioner
+
+- name: Set namespace node-selector if infra nodes are present
+  template:
+    src: nfs-subdir-provisioner/namespace.yml.j2
+    dest: "{{ openshift_gitops_dir }}/nfs-subdir-provisioner/patches/namespace.yaml"
+
+- name: Template nfs-client-provisioner deployment patch
+  template:
+    src: nfs-subdir-provisioner/deployment.yaml.j2
+    dest: "{{ openshift_gitops_dir }}/nfs-subdir-provisioner/patches/deployment.yaml"
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: nfs-subdir-provisioner

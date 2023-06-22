@@ -1,0 +1,13 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: external-registry-ca
+  namespace: openshift-config
+data:
+{% for registry in allowedregistries %}
+  {% if registry.ca is defined %}
+  {{ registry.url }}: |
+    {{ registry.ca | indent(width=4) }}
+  {% endif%}
+{% endfor %}

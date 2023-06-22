@@ -1,0 +1,8 @@
+apiserver_certificate:
+  name: example-api-cert
+  certfile: "/opt/openshift_files/certs/{{ cluster }}/api.{{ cluster }}.{{ base_domain }}.fullchain.pem"
+  keyfile: "/opt/openshift_files/certs/{{ cluster }}/api.{{ cluster }}.{{ base_domain }}.key"
+#  cert_content: "fsdgweg......"
+#  key_content: "dsdfhefhea......"
+
+#etcd_encryption: true

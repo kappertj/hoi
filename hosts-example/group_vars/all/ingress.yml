@@ -1,0 +1,64 @@
+openshift_ingress_controllers:
+- name: default
+  certfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.fullchain.pem
+  keyfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.key
+  #cert_content: "sdfgherh....."
+  #key_content: "dfghserhrsd...."
+  replicas: "{{ groups['infra'] | length }}"
+  #domain: "apps.{{ cluster }}.{{ base_domain }}"
+  nodeplacement:
+    nodeSelector:
+      matchLabels:
+        node-role.kubernetes.io/infra: ""
+#      matchExpressions:
+#      - key: phase
+#        operator: NotIn
+#        values:
+#        - production
+#        - development
+#        - test
+#        - acceptance
+#- name: dta
+#  domain: "dta.{{ cluster }}.{{ base_domain }}"
+#  force_loadbalancer: true
+#  certfile: /some/cert
+#  keyfile: /some/key
+#  replicas: 2
+#  nodeplacement:
+#    nodeSelector:
+#      matchLabels:
+#        node-role.kubernetes.io/infra: ""
+#      matchExpressions:
+#      - key: phase
+#        operator: In
+#        values:
+#        - development
+#        - test
+#        - acceptance
+#  namespaceSelector:
+#    matchExpressions:
+#    - key: phase
+#      operator: In
+#      values:
+#      - production
+#- name: production
+#  domain: "prod.{{ cluster }}.{{ base_domain }}"
+#  certfile: /some/cert
+#  keyfile: /some/key
+#  replicas: 2
+#  nodeplacement:
+#    nodeSelector:
+#      matchLabels:
+#        node-role.kubernetes.io/infra: ""
+#      matchExpressions:
+#      - key: phase
+#        operator: In
+#        values:
+#        - production
+#  namespaceSelector:
+#    matchExpressions:
+#    - key: phase
+#      operator: In
+#      values:
+#      - production
+#      - prod

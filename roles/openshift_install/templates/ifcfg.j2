@@ -1,0 +1,12 @@
+DEVICE={{ item.device }}
+ONBOOT=yes
+TYPE=Ethernet
+BOOTPROTO=none
+IPADDR={{ item.address }}
+NETMASK={{ item.netmask }}
+{% for nameserver in item.dns %}
+DNS{{ loop.index }}={{ nameserver }}
+{% endfor %}
+{% if item.gateway is defined and (item.is_default_gateway | default(False)) %}GATEWAY={{ item.gateway }}{% endif %}
+
+UUID={{ 99999999 | random | to_uuid }}

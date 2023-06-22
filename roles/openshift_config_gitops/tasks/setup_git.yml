@@ -1,0 +1,9 @@
+---
+- name: Clone existing git-repo
+  git:
+    repo: "{{ openshift_gitops_repo_url }}"
+    dest: "{{ openshift_gitops_dir }}"
+    key_file: "{{ openshift_gitops_repo_ssh_privkey_file | default(omit) }}"
+    version: "{{ openshift_gitops_repo_version | default('main') }}"
+#    accept_newhostkey: true
+    force: true

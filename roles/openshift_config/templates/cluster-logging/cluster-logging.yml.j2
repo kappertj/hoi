@@ -1,0 +1,64 @@
+apiVersion: "logging.openshift.io/v1"
+kind: "ClusterLogging"
+metadata:
+  name: "instance"
+  namespace: "openshift-logging"
+spec:
+  managementState: "Managed"
+  logStore:
+    type: "elasticsearch"
+    retentionPolicy:
+      application:
+        maxAge: {{ logging_application_retention | default('21d') }}
+      infra:
+        maxAge: {{ logging_infra_retention | default('10d') }}
+      audit:
+        maxAge: {{ loggin_audit_retention | default('7d') }}
+    elasticsearch:
+      nodeCount: {{ elasticsearch_replicas }}
+      nodeSelector:
+        node-role.kubernetes.io/infra: ''
+      storage:
+        storageClassName: {{ elasticsearch_storageclass }}
+        size: {{ elasticsearch_storage_size }}
+      redundancyPolicy: "{{ elasticsearch_redundancy_policy }}"
+      resources:
+        limits:
+          memory: {{ elasticsearch_memory_limit }}
+        requests:
+          cpu: {{ elasticsearch_cpu_request }}
+          memory: {{ elasticsearch_memory_request }}
+  visualization:
+    type: "kibana"
+    kibana:
+      nodeSelector: 
+        node-role.kubernetes.io/infra: ''
+      resources:
+        limits:
+          memory: {{ kibana_memory_limit }}
+        requests:
+          cpu: {{ kibana_cpu_request }}
+          memory: {{ kibana_memory_request }}
+      replicas: 1
+  curation:
+    type: "curator"
+    curator:
+      nodeSelector: 
+        node-role.kubernetes.io/infra: ''
+      resources:
+        limits:
+          memory: {{ curator_memory_limit }}
+        requests:
+          cpu: {{ curator_cpu_request }}
+          memory: {{ curator_memory_request }}
+      schedule: "{{ curator_schedule }}"
+  collection:
+    logs:
+      type: "fluentd"
+      fluentd:
+        resources:
+          limits:
+            memory: {{ fluentd_memory_limit }}
+          requests:
+            cpu: {{ fluentd_cpu_request }}
+            memory: {{ fluentd_memory_request }}

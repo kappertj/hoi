@@ -1,0 +1,44 @@
+- name: Slurp router certificate
+  slurp:
+    src: "{{ router.certfile }}"
+  register: router_cert_certfile_content
+  when:
+  - router.cert_content is not defined
+
+- name: Set router_cert_content from file
+  set_fact:
+    router_cert_content: "{{ router_cert_certfile_content.content | b64decode }}"
+  when:
+  - router.cert_content is not defined
+
+- name: Set router_cert_content from inventory
+  set_fact:
+    router_cert_content: "{{ router.cert_content }}"
+  when:
+  - router.cert_content is defined
+
+- name: Slurp router keyfile
+  slurp:
+    src: "{{ router.keyfile }}"
+  register: router_cert_keyfile_content
+  when:
+  - router.key_content is not defined
+
+- name: Set router_key_content from file
+  set_fact:
+    router_key_content: "{{ router_cert_keyfile_content.content | b64decode }}"
+  when:
+  - router.key_content is not defined
+
+- name: Set router_key_content from inventory
+  set_fact:
+    router_key_content: "{{ router.key_content }}"
+  when:
+  - router.key_content is defined
+
+- name: Configure custom router cert secrets
+  include_tasks: create_sealed_secret.yml
+  vars:
+    secret_template: "{{ lookup('template', 'ingress/router-certs.yml.j2') | from_yaml }}"
+    apply_to_cluster: false
+    sealed_secret_file: "{{ openshift_gitops_dir }}/ingress/assets/custom-router-certs-{{ router.name }}.yaml"

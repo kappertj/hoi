@@ -1,0 +1,11 @@
+---
+- name: Wait for all nodes to become available
+  shell: "for CSR in $({{ oc_command }} get csr | awk '/Pending/{ print $1}'); do {{ oc_command }} adm certificate approve ${CSR}; done; {{ oc_command }} get node {{ inventory_hostname }}"
+  register: oc_nodes
+  until: oc_nodes.rc == 0
+  delay: 30
+  retries: 10000
+  delegate_to: "{{ bastion_host }}"
+  when: "'bootstrap' not in group_names"
+  changed_when: false
+

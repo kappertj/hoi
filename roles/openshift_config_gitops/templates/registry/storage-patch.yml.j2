@@ -1,0 +1,13 @@
+#jinja2: lstrip_blocks: True
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  storage:
+  {% if registry_storage_claim_name is defined %}
+    pvc:
+      claim: {{ registry_storage_claim_name }}
+  {% else %}
+      emptyDir: {}
+  {% endif %}

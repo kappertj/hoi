@@ -1,0 +1,60 @@
+#jinja2: lstrip_blocks: True
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  {% if (oauth_token_lifetime_seconds is defined) or (oauth_token_inactivity_timeout is defined )%}
+  tokenConfig:
+    {% if oauth_token_lifetime_seconds is defined %}
+    accessTokenMaxAgeSeconds: {{ oauth_token_lifetime_seconds }}
+    {% endif %}
+    {% if oauth_token_inactivity_timeout is defined %}
+    accessTokenInactivityTimeout: {{ oauth_token_inactivity_timeout }}
+    {% endif %}
+  {% endif %}
+  {% if 'branding' in openshift_components %}
+  templates:
+    error:
+      name: custom-login-templates
+    login:
+      name: custom-login-templates
+    providerSelection:
+      name: custom-login-templates
+  {% endif %}
+  identityProviders:
+  {% for provider in oauths %}
+  {% if provider.type | default('LDAP') == 'LDAP' %}
+  - name: {{ provider.name }}
+    mappingMethod: claim
+    type: LDAP
+    ldap:
+      attributes:
+        {{ provider.attributes | to_nice_yaml | indent(width=8) }}
+      bindDN: "{{ provider.binddn }}"
+      bindPassword:
+        name: ldap-bind-password-{{ provider.name }}
+      ca:
+        name: ldap-ca-{{ provider.name }}
+      insecure: false
+      url: {{ provider.scheme | default('ldap') }}://{{ provider.host }}/{{ provider.base }}{{ provider.urlfilter | default('') }}
+  {% endif %}
+  {% if provider.type | default('LDAP') == 'OpenID' %}
+    - name: {{ provider.name }}
+      mappingMethod: claim
+      type: OpenID
+      openID:
+        claims:
+          email:
+          - email
+          name:
+          - name
+          preferredUsername:
+          - upn
+        clientID: {{ provider.openid_clientid }}
+        clientSecret:
+          name: {{ provider.name }}
+        extraScopes: []
+        issuer: {{ provider.openid_issuer }}
+  {% endif %}
+  {% endfor %}

@@ -1,0 +1,57 @@
+---
+# tasks file for add-storage-to-monitoring
+- name: Get current config
+  k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: v1
+    namespace: openshift-monitoring
+    kind: ConfigMap
+    name: cluster-monitoring-config
+  register: cluster_monitoring_config_raw
+
+- name: Get current config
+  set_fact:
+    cluster_monitoring_config: "{{ cluster_monitoring_config_raw | json_query('resources[0].data') }}"
+
+- name: debug config.yaml
+  debug:
+    verbosity: 1
+    msg: |
+      {{ cluster_monitoring_config }}
+
+- name: debug config.yaml
+  set_fact:
+    config_yaml: "{{ cluster_monitoring_config['config.yaml'] | from_yaml }}"
+
+- name: debug config.yaml keys
+  debug:
+    verbosity: 1
+    msg: "{{ config_yaml.prometheusK8s }}"
+
+- name: Template storage keys
+  set_fact:
+    storage_keys: "{{ lookup('template', 'monitoring_storage/storage.yml.j2') | from_yaml }}"
+
+- name: Combine existing config.yaml with storage keys
+  set_fact:
+    config_yaml: "{{ config_yaml | combine(storage_keys, recursive=True) }}"
+
+- name: debug config.yaml keys
+  debug:
+    verbosity: 1
+    msg: "{{ config_yaml.prometheusK8s }}"
+
+- name: Test template
+  debug:
+    verbosity: 1
+    msg: |
+      "{{ lookup('template', 'monitoring_storage/cluster-monitoring.yaml.j2') }}"
+
+- name: Apply new config to cluster
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'monitoring_storage/cluster-monitoring.yaml.j2') | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge

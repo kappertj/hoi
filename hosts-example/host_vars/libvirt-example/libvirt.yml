@@ -1,0 +1,11 @@
+extra_disks:
+- name: logging
+  size: 200G
+- name: metrics
+  size: 200G
+
+image_size: 120G
+
+virt_host: hypervisor01.example.com
+virt_memory: 32768
+virt_vcpus: 4

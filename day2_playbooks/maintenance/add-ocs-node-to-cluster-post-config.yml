@@ -1,0 +1,134 @@
+---
+# Requirements:
+# - Ensure access to the openshift cluster
+# - Ensure user has cluster-admin permissions
+# - Ensure an active 'oc login' session
+
+# Performing second part (gently adding the ndoe) of the solution described at:
+# - URL: https://access.redhat.com/documentation/en-us/red_hat_openshift_container_storage/4.6/html/replacing_nodes/openshift_container_storage_deployed_using_local_storage_devices#replacing-an-operational-node-using-local-storage-devices_bm-upi-failed
+
+# The second part of the playbook is called: remove-ocs-node-from-cluster.yml
+# You may encounter some raceconditions here, it works most of the time. Its not perfect yet.
+
+- name: Prerequisite check for given OCS node {{ node }}
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: auto
+  tasks:
+  - name: Check if a single OCS node is given
+    assert:
+      that:
+        - node is defined
+        - node is string
+        - node in groups['storage']
+
+  - name: Get required pods
+    k8s_info:
+      kind: Pod
+      namespace: openshift-storage
+      label_selectors:
+      - app = rook-ceph-osd
+      field_selectors:
+      - spec.nodeName={{ node }}
+    register: pod_info
+    until:
+    - pod_info.resources | length > 0
+    - pod_info.resources[0].status.phase == "Pending"
+    retries: 100
+
+  - name: Filter pod object
+    set_fact:
+      pod_info_status: "{{ pod_info.resources | json_query(query) }}"
+    vars:
+      query: "[*].{ name: metadata.name, namespace: metadata.namespace, labels: metadata.labels, node: spec.nodeName, status: status.phase }"
+
+  - name: Get ocs-osd-removal-job
+    k8s_info:
+      kind: Job
+      namespace: openshift-storage
+      name: ocs-osd-removal-job
+    register: job_info_ocs_osd_removal_job
+
+  - name: Process the ocs-osd-removal template
+    shell: >
+      oc process -n openshift-storage ocs-osd-removal
+      -p FAILED_OSD_IDS={{ pod_info_status[0].labels['ceph-osd-id'] }}
+      | oc create -n openshift-storage -f -
+    register: process_ocs_osd_removal
+    when:
+    - pod_info_status[0].labels['ceph-osd-id'] is defined
+    - not job_info_ocs_osd_removal_job.resources[0].metadata.name == "ocs-osd-removal-job"
+
+  - name: Human help message
+    debug:
+      msg: "If the job does not complete, check what is up with => oc logs -l job-name=ocs-osd-removal-{{ pod_info_status[0].labels['ceph-osd-id'] }} -n openshift-storage --tail=-1"
+    when:
+    - pod_info_status[0].labels['ceph-osd-id'] is defined
+    - process_ocs_osd_removal.changed
+
+  - name: Get job status
+    k8s_info:
+      kind: Job
+      namespace: openshift-storage
+      name: ocs-osd-removal-job
+    register: job_info
+    until:
+    - job_info.resources | length > 0
+    - job_info.resources[0].spec.completions == 1
+    retries: 100
+    when:
+    - pod_info_status[0].labels['ceph-osd-id'] is defined
+
+  - name: Get pv status
+    k8s_info:
+      kind: PersistentVolume
+    register: pv_info
+
+  - name: Filter pv info object
+    set_fact:
+      pv_info_status: "{{ pv_info.resources | json_query(query) }}"
+    vars:
+      query: "[*].{ name: metadata.name, storageclass: spec.storageClassName, status: status.phase }"
+
+  - name: Delete pv if status is Released or Terminating
+    k8s:
+      kind: PersistentVolume
+      name: "{{ item.name }}"
+      state: absent
+    loop: "{{ pv_info_status }}"
+    when:
+    - item.storageclass == "storageclass"
+    - (item.status == "Released") or
+      (item.status == "Terminating")
+
+  - name: Get crashcollector pod
+    k8s_info:
+      kind: Pod
+      namespace: openshift-storage
+      label_selectors:
+      - app = rook-ceph-crashcollector
+      - node_name = {{ node }}
+    register: pod_list
+
+  - name: Filter pod list object
+    set_fact:
+      pod_list_info: "{{ pod_list.resources | json_query(query) }}"
+    vars:
+      query: "[*].{ name: metadata.name, namespace: metadata.namespace }"
+
+  - name: Delete the crashcollector pod
+    k8s:
+      kind: Pod
+      name: "{{ item.name }}"
+      namespace: "{{ item.namespace }}"
+      state: absent
+    loop: "{{ pod_list_info }}"
+
+  - name: Delete ocs-osd-removal job
+    k8s:
+      kind: Job
+      name: ocs-osd-removal-job
+      namespace: openshift-storage
+      state: absent

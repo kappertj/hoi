@@ -1,0 +1,27 @@
+# Data Retention
+
+logging_application_retention: 1m
+logging_infra_retention: 2w
+logging_audit_retention: 2w
+
+# Storage and Redundancy
+elasticsearch_replicas: 3
+elasticsearch_storageclass: logging
+elasticsearch_storage_size: 200Gi
+elasicsearch_redundancy_policy: FullRedundancy
+
+# Container Limits
+elasticsearch_cpu_limit: 4
+elasticsearch_memory_limit: 8Gi
+elasticsearch_cpu_request: 500m
+elasticsearch_memory_request: 8Gi
+
+kibana_cpu_limit: 1 
+kibana_memory_limit: 1Gi
+kibana_cpu_request: 500m
+kibana_memory_request: 1Gi
+
+fluentd_cpu_limit: 1
+fluentd_memory_limit: 1Gi
+fluentd_cpu_request: 200m
+fluentd_memory_request: 1Gi

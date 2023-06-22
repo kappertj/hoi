@@ -1,0 +1,2 @@
+nfs_subdir_provisioner_server: nfs.example.com
+nfs_subdir_provisioner_export: /exports/openshift

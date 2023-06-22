@@ -1,0 +1,16 @@
+apiVersion: "logging.openshift.io/v1"
+kind: "ClusterLogging"
+metadata:
+  name: "instance"
+  namespace: "openshift-logging"
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  managementState: "Managed"
+  logStore:
+    type: lokistack
+    lokistack:
+      name: lokistack-cluster
+  collection:
+    type: vector

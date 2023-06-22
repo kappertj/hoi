@@ -1,0 +1,20 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ registry_storage_claim_name }}
+  namespace: openshift-image-registry
+spec:
+  accessModes:
+  {% if registry_storage_supports_rwx | default(False) %}
+  - ReadWriteMany
+  {% else %}
+  - ReadWriteOnce
+  {% endif %}
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: {{ registry_storage_claim_size | default('100Gi') }}
+  {% if registry_storage_claim_storageclass is defined %}
+  storageClassName: {{ registry_storage_claim_storageclass }}
+  {% endif %}

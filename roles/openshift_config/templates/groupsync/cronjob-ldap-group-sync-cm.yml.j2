@@ -1,0 +1,71 @@
+#jinja2: lstrip_blocks: True
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ldap-config
+  namespace: "{{ groupsync_cronjob_namespace }}"
+  labels:
+    template: "cronjob-ldap-group-sync"
+data:
+  whitelist.txt: |
+    {% for group in groupsync_groups %}
+    {{ group.dn }}
+    {% endfor %}
+
+  ldap-sync.yml: |
+    kind: LDAPSyncConfig
+    apiVersion: v1
+    url: "{{ groupsync_cronjob_ldap_url }}"
+    insecure: false
+    ca: /pki/ldap-ca.pem
+    bindDN: "{{ groupsync_cronjob_ldap_user }}"
+    bindPassword: "{{ groupsync_cronjob_ldap_password }}"
+    {%  if groupsync_cronjob_type == 'ad' %}
+    augmentedActiveDirectory:
+        groupsQuery:
+            baseDN: "{{ groupsync_cronjob_ldap_base_dc_groups }}"
+            scope: sub
+            derefAliases: never
+            pageSize: 0
+        groupUIDAttribute: dn
+        groupNameAttributes:
+        - cn
+        usersQuery:
+            baseDN: "{{ groupsync_cronjob_ldap_base_dc_users }}"
+            scope: sub
+            derefAliases: never
+            pageSize: 0
+            filter: (objectclass=*)
+        userNameAttributes:
+        - sAMAccountName
+        groupMembershipAttributes:
+        - memberOf
+    {% else %}
+    rfc2307:
+        groupsQuery:
+            baseDN: "{{ groupsync_cronjob_ldap_base_dc_groups }}"
+            scope: sub
+            filter: (objectClass=ipaUserGroup)
+            derefAliases: always
+            pageSize: 0
+        groupUIDAttribute: dn
+        groupNameAttributes:
+        - cn
+        userUIDAttribute: dn
+        usersQuery:
+            baseDN: "{{ groupsync_cronjob_ldap_base_dc_users }}"
+            scope: sub
+            derefAliases: always
+            pageSize: 0
+        userNameAttributes:
+        - uid
+        groupMembershipAttributes:
+        - member
+    {% endif %}
+    {% if groupsync_groups | length > 0 %}
+    groupUIDNameMapping:
+    {% for group in groupsync_groups %}
+      "{{ group.dn }}": {{ group.short }}
+    {% endfor %}
+    {% endif %}
+

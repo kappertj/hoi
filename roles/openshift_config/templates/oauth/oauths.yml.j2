@@ -1,0 +1,42 @@
+#jinja2: lstrip_blocks: True
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  identityProviders:
+  {% for provider in oauths %}
+  {% if provider.type == 'LDAP' %}
+  - name: {{ provider.name }}
+    mappingMethod: claim
+    type: LDAP
+    ldap:
+      attributes:
+        {{ provider.attributes | to_nice_yaml | indent(width=8) }}
+      bindDN: "{{ provider.binddn }}"
+      bindPassword:
+        name: ldap-bind-password-{{ provider.name }}
+      ca:
+        name: ldap-ca-{{ provider.name }}
+      insecure: false
+      url: {{ provider.scheme | default('ldap') }}://{{ provider.host }}/{{ provider.base }}{{ provider.urlfilter | default('') }}
+  {% endif %}
+  {% if provider.type == 'OpenID' %}
+  - name: {{ provider.name }}
+    mappingMethod: claim
+    type: OpenID
+    openID:
+      claims:
+        email:
+        - email
+        name:
+        - name
+        preferredUsername:
+        - upn
+      clientID: {{ provider.openid_clientid }}
+      clientSecret:
+        name: openid-connect-{{ provider.name }}
+      extraScopes: []
+      issuer: {{ provider.openid_issuer }}
+  {% endif %}
+  {% endfor %}

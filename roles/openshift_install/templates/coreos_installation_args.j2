@@ -1,0 +1,33 @@
+console=tty0
+console=ttyS0,115200n8
+nomodeset
+rd.neednet=1
+coreos.inst=yes
+coreos.inst.install_dev={{ install_dev }}
+coreos.live.rootfs_url={{ coreos_rootfs_url }}
+coreos.inst.ignition_url={{ openshift_installer_ignition_url }}
+{% for nic in network_config %}
+  {% if nic.vlan is defined %}
+    {% set net_device = nic.device + '.' + (nic.vlan | string ) %}
+  {% else %}
+    {% set net_device = nic.device %}
+  {% endif %}
+  ip={{ nic.address}}::{% if nic.is_default_gateway | default(False) %}{{ nic.gateway | default('') }}{% endif %}:{{ nic.netmask }}:{{ nic.hostname | default('') }}:{{ net_device }}:none
+  {% if nic.slaves is defined %}
+    bond={{ nic.device }}:{{ nic.slaves | map(attribute='device') | join(',') }}:{{ nic.bonding_opts | default(bonding_opts) | join(',')}}
+  {% endif %}
+  {% if nic.vlan is defined %}
+    vlan={{ nic.device }}.{{ nic.vlan }}:{{ nic.device }}
+  {% endif %}
+{% endfor %}
+{% if network_config[0].vlan is defined %}
+  bootdev={{ network_config[0].device + '.' + network_config[0].vlan| string }}
+{% else %}
+  bootdev={{ network_config[0].device}}
+{% endif %}
+{% for nic in network_config %}
+  {% for nameserver in nic['dns'] | default([]) %}
+    nameserver={{ nameserver }} 
+  {% endfor %}
+{% endfor %} 
+{{ additional_kernel_args | default('') }}

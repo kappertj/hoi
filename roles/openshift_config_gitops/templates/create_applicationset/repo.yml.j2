@@ -1,0 +1,14 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ openshift_gitops_repo_name | default('gitops') }}-repo
+  namespace: openshift-gitops
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: {{ openshift_gitops_repo_url }}
+  sshPrivateKey: |
+    {{ openshift_gitops_repo_ssh_privkey_content.content | b64decode | indent(width=4) }}
+

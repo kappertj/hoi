@@ -1,0 +1,10 @@
+- name: Slurp ca content
+  slurp:
+    src: "{{ item.cafile }}"
+  register: oauths_ca_content
+
+- name: Configure oauth trusted CAs
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'oauth/oauths-ca.yml.j2') | from_yaml }}"

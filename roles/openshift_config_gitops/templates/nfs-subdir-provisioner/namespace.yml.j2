@@ -1,0 +1,9 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-nfs-subdir-provisioner
+  {% if groups['infra'] | default([]) | length > 0 %}
+  annotations:
+    openshift.io/node-selector: "node-role.kubernetes.io/infra="
+  {% endif %}

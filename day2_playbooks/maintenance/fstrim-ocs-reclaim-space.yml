@@ -1,0 +1,79 @@
+---
+# Requirements:
+# - Ensure access to the openshift cluster
+# - Ensure user has cluster-admin permissions
+# - Ensure an active 'oc login' session
+
+# Performing solution described at:
+# - Title: Perform 'fstrim' operation on the RBD PV's in an OpenShift Container Storage 4.X cluster.
+# - URL: https://access.redhat.com/solutions/5799741
+# - BZ: https://bugzilla.redhat.com/show_bug.cgi?id=1783780
+# - BZ: https://bugzilla.redhat.com/show_bug.cgi?id=1956418
+
+- name: Free object space on PVC's with strorage class ocs-storagecluster-ceph-rbd
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Create a cluster operations namespace with specific requirements for maintenance activities
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          annotations:
+            openshift.io/description: "Namespace for specific OpenShift Operations"
+            openshift.io/display-name: "cluster-ops"
+            openshift.io/node-selector: ""
+            scheduler.alpha.kubernetes.io/defaultTolerations: '[{"operator": "Exists"}]'
+          name: cluster-ops
+
+  - name: Get PVC's
+    k8s_info:
+      kind: PersistentVolumeClaim
+    register: pvc_list
+  
+  - name: Filter PVC list for "spec.storageClassName=ocs-storagecluster-ceph-rbd"
+    set_fact:
+      pvc_list_sc_ceph_rbd: "{{ pvc_list.resources | json_query(query) }}"
+    vars:
+      query: "[?spec.storageClassName=='ocs-storagecluster-ceph-rbd'].{ name: metadata.name, namespace: metadata.namespace, labels: metadata.labels sc: spec.storageClassName, pv: spec.volumeName, phase: status.phase }"
+
+  - name: Get Pods
+    k8s_info:
+      kind: Pod
+    register: pod_list
+
+  - name: Filter Pod list for "spec.persistentVolumeClaim"
+    set_fact:
+      pod_list_pvc: "{{ pod_list.resources | json_query(query) }}"
+    vars:
+      query: "[?spec.volumes[?persistentVolumeClaim]].{ name: metadata.name, namespace: metadata.namespace, labels: metadata.labels, nodename: spec.nodeName, volumes: spec.volumes[?persistentVolumeClaim] }"
+
+  - name: Start debug pod on nodes to fstrim required mountpoint/volume
+    shell: |
+      /usr/bin/expect -c '
+      set timeout 20
+      set cmd_df "df --output=target"
+      set cmd_grep "grep {{ item.0.pv }}"
+      set cmd_xargs "xargs fstrim"
+      spawn oc debug node/{{ item.1.nodename }} -n cluster-ops
+      send "$cmd_df | $cmd_grep | $cmd_xargs\r"
+      send "exit\r"
+      expect { -re "*.*" }'
+    loop: "{{ pvc_list_sc_ceph_rbd | product(pod_list_pvc) | list }}"
+    loop_control:
+      label: "{{ item.0.name }} - {{ item.0.pv }}"
+    register: expect_output
+    when:
+    - item.0.name == item.1.volumes[0].persistentVolumeClaim.claimName
+
+  - name: Expect output for the human
+    debug:
+      msg: "{{ item.stdout_lines }}"
+    loop: "{{ expect_output.results }}"
+    loop_control:
+      label: "{{ item.item[0].name }} - {{ item.item[0].pv }}"
+    when:
+    - item.changed

@@ -1,0 +1,5 @@
+---
+- name: Configure etcd encryption
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    definition: "{{ lookup('template', 'etcd_encryption/etcd_encryption.yml.j2') | from_yaml }}"

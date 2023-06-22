@@ -1,0 +1,27 @@
+---
+- name: routercerts_verify
+  include_tasks: verify_certs.yml
+  vars:
+    cert_hostname: "{{ certificate.hostname | default('*.apps.'+cluster+'.'+base_domain) }}"
+  loop: "{{ routercerts_certificates }}"
+  loop_control:
+    loop_var: certificate
+    label: certificate.name
+  when:
+  - "'ingress' in openshift_components"
+  - openshift_ingress_controllers is defined
+  - certificate.certfile is defined
+  - certificate.keyfile is defined
+  tags:
+  - ingress
+
+- name: apiserver_certs_verify
+  include_tasks: verify_certs.yml
+  vars:
+    certificate: "{{ apiserver_certificate }}"
+    cert_hostname: "{{ certificate.hostname | default('api.'+cluster+'.'+base_domain) }}"
+  when:
+  - "'apiserver' in openshift_components"
+  - apiserver_certificate is defined
+  tags:
+  - apiserver_certs

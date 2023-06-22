@@ -1,0 +1,23 @@
+---
+
+- name: Ensure gitops directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: machineconfigs
+
+- name: Add chrony machineConfigs
+  template:
+    src: machineconfigs/99-chrony-machineconfig.yml.j2
+    dest: "{{ openshift_gitops_dir }}/machineconfigs/assets/99-{{ chrony_role }}-chrony-configuration.yaml"
+  loop:
+  - master
+  - worker
+  loop_control:
+    loop_var: chrony_role
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: machineconfigs

@@ -1,0 +1,44 @@
+---
+- name: Move infra projects to infra nodes
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'move_to_infra/' + item) | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  loop:
+  - openshift-ingress.yaml.j2
+  - cluster-config-move.yaml.j2
+  - cluster-monitoring-move.yaml.j2
+
+- name: Get namespaces
+  k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: v1
+    kind: Namespace
+  register: k8s_info_namespaces
+
+- name: Turn namespaces into list
+  set_fact:
+    ocp_namespaces: "{{ k8s_info_namespaces.resources | json_query('[*].metadata.name') }}"
+
+- name: Set project node-selector to infra
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'move_to_infra/project-nodeselector.yaml.j2') | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge
+  when: item in ocp_namespaces
+  loop: "{{ move_to_infra_namespaces | default([]) }}"
+
+- name: Set default node-selector
+  k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'move_to_infra/default-nodeselector.yaml.j2') | from_yaml }}"
+    merge_type:
+    - strategic-merge
+    - merge

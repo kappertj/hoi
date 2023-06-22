@@ -1,0 +1,67 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |+
+    {% if monitoring_user_workload_enabled %}
+    enableUserWorkload: true
+    {% endif %}
+    alertmanagerMain:
+      {% if groups['infra'] | default([]) | length >= 3 %}
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      {% endif %}
+      {% if alertmanager_storageclass is defined and alertmanager_storage_size is defined %}
+      volumeClaimTemplate:
+        metadata:
+          name: alerts
+        spec:
+          storageClassName: {{ alertmanager_storageclass }}
+          resources:
+            requests:
+              storage: {{ alertmanager_storage_size }}
+      {% endif %}
+    prometheusK8s:
+      {% if prometheus_retention is defined %}
+      retention: {{ prometheus_retention }}
+      {% endif %}
+      {% if groups['infra'] | default([]) | length >= 2 %}
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      {% endif %}
+      {% if prometheus_storageclass is defined and prometheus_storage_size is defined %}
+      volumeClaimTemplate:
+        metadata:
+          name: metrics
+        spec:
+          storageClassName: {{ prometheus_storageclass }}
+          resources:
+            requests:
+              storage: {{ prometheus_storage_size }}
+      {% endif %}
+    {% if groups['infra'] | default([]) | length >= 2 %}
+    prometheusOperator:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    grafana:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    k8sPrometheusAdapter:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    kubeStateMetrics:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    openshiftStateMetrics:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    telemeterClient:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    thanosQuerier:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    {% endif %}

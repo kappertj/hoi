@@ -1,0 +1,100 @@
+- name: Remove old machine
+  vmware_guest:
+    hostname: "{{ vcenters[vmware.vcenter].hostname }}"
+    username: "{{ vcenters[vmware.vcenter].username }}"
+    password: "{{ vcenters[vmware.vcenter].password }}"
+    validate_certs: "{{ vcenters[vmware.vcenter].validate_certs | default(omit) }}"
+    name: "{{ vmware_vm_name_notation | default(inventory_hostname_short | upper) }}"
+    folder: "{{ vmware.folder }}"
+    datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
+    state: absent
+    force: true
+  delegate_to: "{{ bastion_host }}"
+  become: true
+
+- name: Upload Image
+  vsphere_copy:
+    hostname: "{{ vcenters[vmware.vcenter].hostname }}"
+    username: "{{ vcenters[vmware.vcenter].username }}"
+    password: "{{ vcenters[vmware.vcenter].password }}"
+    validate_certs: "{{ vcenters[vmware.vcenter].validate_certs | default(omit) }}"
+    src: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso"
+    datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
+    datastore: "{{ vcenters[vmware.vcenter].iso_datastore }}"
+    path: "iso/{{ inventory_hostname }}.iso"
+    timeout: "{{ vcenters[vmware.vcenter].copy_timeout | default(omit) }}"
+  delegate_to: "{{ bastion_host }}"
+  become: true
+
+# extra_disks are not created in different datastores due to a defect in the vmware_guest module
+# https://github.com/ansible-collections/community.vmware/issues/931
+# Tasks "add a new disk to above VM" and "(Re)start machine with install" have been added as a workaround.
+
+- name: Create disk config
+  set_fact:
+    vm_disks: "{{ lookup('template', 'vmware_disks.yml.j2') | from_yaml | list }}"
+#    vm_disks: "{{ lookup('template', 'vmware_disks.yml.j2') | from_yaml | list + (extra_disks | default([])) }}"
+  delegate_to: "{{ bastion_host }}"
+
+- name: Debug vmware networks
+  debug:
+    verbosity: 1
+    msg: |
+      "{{ network_config | json_query('[*].{name: name}') | to_nice_yaml }}"
+  delegate_to: "{{ bastion_host }}"
+
+- name: (Re)create machine with install
+  vmware_guest:
+    hostname: "{{ vcenters[vmware.vcenter].hostname }}"
+    username: "{{ vcenters[vmware.vcenter].username }}"
+    password: "{{ vcenters[vmware.vcenter].password }}"
+    validate_certs: "{{ vcenters[vmware.vcenter].validate_certs | default(omit) }}"
+    name: "{{ vmware_vm_name_notation | default(inventory_hostname_short | upper) }}"
+    folder: "{{ vmware.folder }}"
+    cluster: "{{ vcenters[vmware.vcenter].cluster }}"
+    datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
+    state: poweredoff
+    guest_id: "{{ vmware.guest_id }}"
+    cdrom:
+      type: iso
+      iso_path: "[{{ vcenters[vmware.vcenter].iso_datastore }}] iso/{{ inventory_hostname }}.iso"
+    networks: "{{ network_config | json_query('[?vmware_net].{name: vmware_net}') }}"
+    customvalues: "{{ vmware.customvalues | default(omit) }}"
+    advanced_settings: "{{ vmware.advanced_settings | default(omit) }}"
+    hardware:
+      version: "{{ vmware.hardware_version | default(omit) }}"
+      memory_mb: "{{ vmware.memory }}"
+      num_cpus: "{{ vmware.vcpu }}"
+      boot_firmware: "{{ vmware.boot_firmware | default(omit) }}"
+    disk: "{{ vm_disks }}"
+  delegate_to: "{{ bastion_host }}"
+  become: true
+  throttle: 1
+
+- name: add a new disk to above VM
+  vmware_guest_disk:
+    hostname: "{{ vcenters[vmware.vcenter].hostname }}"
+    username: "{{ vcenters[vmware.vcenter].username }}"
+    password: "{{ vcenters[vmware.vcenter].password }}"
+    validate_certs: "{{ vcenters[vmware.vcenter].validate_certs | default('omit') }}"
+    name: "{{ vmware_vm_name_notation | default(inventory_hostname_short | upper) }}"
+    folder: "{{ vmware.folder }}"
+    datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
+    disk: "{{ extra_disks }}"
+  delegate_to: "{{ bastion_host }}"
+  become: true
+  when: (extra_disks is defined) and (extra_disks|length > 0)
+
+- name: (Re)start machine with install
+  vmware_guest:
+    hostname: "{{ vcenters[vmware.vcenter].hostname }}"
+    username: "{{ vcenters[vmware.vcenter].username }}"
+    password: "{{ vcenters[vmware.vcenter].password }}"
+    validate_certs: "{{ vcenters[vmware.vcenter].validate_certs | default('omit') }}"
+    name: "{{ vmware_vm_name_notation | default(inventory_hostname_short | upper) }}"
+    folder: "{{ vmware.folder }}"
+    cluster: "{{ vcenters[vmware.vcenter].cluster }}"
+    datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
+    state: poweredon
+  delegate_to: "{{ bastion_host }}"
+  become: true

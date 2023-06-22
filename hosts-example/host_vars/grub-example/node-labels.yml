@@ -1,0 +1,3 @@
+extra_node_labels:
+  "topology.kubernetes.io/region": Amersfoort
+  "topology.kubernetes.io/zone": DC1

@@ -1,0 +1,20 @@
+- name: Get DNS record
+  set_fact:
+    dns_ip: "{{ lookup('dig', item) }}"
+  delegate_to: "{{ bastion_host }}"
+  run_once: True
+
+- name: Abort if DNS entry can not be found
+  assert:
+    success_msg: |
+      {{ item }} resolves to: {{ dns_ip }}
+    fail_msg: |
+      {% if dns_ip == 'NXDOMAIN' %}
+      Could not resolve {{ item }}
+      {% else %}
+      {{ item }} resolves to: {{ dns_ip }}
+      {% endif %}
+    that:
+    - dns_ip != 'NXDOMAIN'
+  run_once: True
+  delegate_to: "{{ bastion_host }}"

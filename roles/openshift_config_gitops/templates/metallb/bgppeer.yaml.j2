@@ -1,0 +1,12 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: metallb.io/v1beta2
+kind: BGPPeer
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  namespace: metallb-system
+  name: {{ item.name }}
+spec:
+  peerAddress: {{ item.address }}
+  peerASN: {{ item.asn }}
+  myASN: {{ metallb.asn }}

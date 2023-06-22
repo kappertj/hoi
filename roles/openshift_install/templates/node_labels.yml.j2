@@ -1,0 +1,24 @@
+#jinja2: lstrip_blocks: True
+apiVersion: v1
+kind: Node
+metadata:
+  name: "{{ inventory_hostname }}"
+  labels:
+    safeguard-against-removing-all-labels: null
+  {% if ('infra' in group_names) or ('masters' in group_names) or ('storage' in group_names) %}
+    node-role.kubernetes.io/worker: null
+  {% endif %}
+  {% if ('infra' in group_names) %}
+    node-role.kubernetes.io/infra: ""
+  {% endif %}
+  {% if ('storage' in group_names) %}
+    node-role.kubernetes.io/storage: ""
+  {% endif %}
+  {% if extra_node_labels is defined %}
+  {% for key, value in extra_node_labels.items() %}
+    {{ key }}: "{{ value }}"
+  {% endfor %}
+  {% endif %}
+  {% if install_method == 'libvirt' %}
+    topology.kubernetes.io/hypervisor: {{ virt_host }}
+  {% endif %}

@@ -1,0 +1,28 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: config.openshift.io/v1
+kind: Infrastructure
+metadata:
+  creationTimestamp: null
+  name: cluster
+spec:
+  cloudConfig:
+    name: ""
+  platformSpec:
+    type: BareMetal
+status:
+  apiServerInternalURI: https://api-int.{{ cluster }}.{{ base_domain }}:6443
+  apiServerURL: https://api.{{ cluster }}.{{ base_domain }}:6443
+  controlPlaneTopology: HighlyAvailable
+  etcdDiscoveryDomain: ""
+  infrastructureName: {{ cluster }}-{{ lookup('password', '/dev/null chars=ascii_letters,digits length=5') }}
+  infrastructureTopology: HighlyAvailable
+  platform: BareMetal
+  platformStatus:
+    baremetal:
+      apiServerInternalIP: {{ api_vip }}
+      apiServerInternalIPs:
+      - {{ api_vip }}
+      ingressIP: {{ ingress_vip }}
+      ingressIPs:
+      - {{ ingress_vip }}
+    type: BareMetal

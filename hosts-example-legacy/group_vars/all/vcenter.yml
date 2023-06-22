@@ -1,0 +1,39 @@
+# Define your vcenters/datacenters here, only needed for VMWare installs
+vcenters:
+  dcr1:
+    hostname: vcenter1.example.com
+    username: "{{ encrypted_vcenter_username }}"
+    password: "{{ encrypted_vcenter_password }}"
+    datacenter: DCR2
+    datastore: DCR1-STORE
+    iso_datastore: DCR1-ISO
+    cluster: CL-DCR1
+  dcr2:
+    hostname: vcenter2.example.com
+    username: "{{ encrypted_vcenter_username }}"
+    password: "{{ encrypted_vcenter_password }}"
+    datacenter: DCR2
+    datastore: DCR2-STORE
+    iso_datastore: DCR2-ISO
+    cluster: CL-DCR2
+  dcr3:
+    hostname: vcenter3.example.com
+    username: "{{ encrypted_vcenter_username }}"
+    password: "{{ encrypted_vcenter_password }}"
+    datacenter: DCR2
+    datastore: DCR3-STORE
+    iso_datastore: DCR3-ISO
+    cluster: CL-DCR3
+
+# Option to choose VMware VM name notation when creating VMware VM's.
+# Default fallback in the VMware tasks is:
+# "{{ vmware_vm_name_notation | default(inventory_hostname_short | upper) }}"
+# This variable is not required, hence optional. Can be use to change to
+# for example: "{{ inventory_hostname }}"
+vmware_vm_name_notation: "{{ inventory_hostname_short | upper }}"
+
+# Option to choose the VMware VM primary disk type used for CoreOs nodes.
+# Default fallback in the VMware tasks is: "thin"
+# This variable is not required, hence optional. Can be use to change to
+# for example: "eagerzeroedthick"
+install_dev_type: thin

@@ -1,0 +1,13 @@
+apiVersion: config.openshift.io/v1
+kind: APIServer
+metadata:
+  annotations:
+    release.openshift.io/create-only: "true"
+  name: cluster
+spec:
+  servingCerts:
+    namedCertificates:
+    - servingCertificate:
+        name: {{ apiserver_certificate.name }}
+      names:
+      - api.{{ cluster }}.{{ base_domain }}

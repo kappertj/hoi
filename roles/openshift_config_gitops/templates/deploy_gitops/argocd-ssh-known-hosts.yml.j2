@@ -1,0 +1,11 @@
+#jinja2: lstrip_blocks: True
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: openshift-gitops
+  namespace: openshift-gitops
+spec:
+  initialSSHKnownHosts:
+    excludedefaulthosts: false
+    keys: |
+      {{ openshift_gitops_repo_known_hosts | indent(width=6) }}

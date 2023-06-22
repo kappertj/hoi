@@ -1,0 +1,16 @@
+- name: Find all generated files
+  find:
+    path: "{{ openshift_gitops_dir }}/{{ gitops_component }}/assets"
+    file_type: file
+  register: gitops_component_files
+
+- name: Find all generated patches
+  find:
+    path: "{{ openshift_gitops_dir }}/{{ gitops_component }}/patches"
+    file_type: file
+  register: gitops_component_patches_strategic
+
+- name: Configure kustomization file
+  template:
+    src: common/kustomization.yaml.j2
+    dest: "{{ openshift_gitops_dir }}/{{ gitops_component }}/kustomization.yaml"

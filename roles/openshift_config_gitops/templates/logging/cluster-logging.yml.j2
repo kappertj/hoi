@@ -1,0 +1,63 @@
+#jinja2: lstrip_blocks: True
+apiVersion: "logging.openshift.io/v1"
+kind: "ClusterLogging"
+metadata:
+  name: "instance"
+  namespace: "openshift-logging"
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  managementState: "Managed"
+  logStore:
+    type: "elasticsearch"
+    retentionPolicy:
+      application:
+        maxAge: {{ logging_application_retention | default('21d') }}
+      infra:
+        maxAge: {{ logging_infra_retention | default('10d') }}
+      audit:
+        maxAge: {{ loggin_audit_retention | default('7d') }}
+    elasticsearch:
+      nodeCount: {{ elasticsearch_replicas }}
+      {% if groups['infra'] | default([]) | length >= 3 %}
+      nodeSelector:
+        node-role.kubernetes.io/infra: ''
+      {% endif %}
+      storage:
+        storageClassName: {{ elasticsearch_storageclass }}
+        size: {{ elasticsearch_storage_size }}
+      redundancyPolicy: "{{ elasticsearch_redundancy_policy }}"
+      resources:
+        limits:
+          cpu: {{ elasticsearch_cpu_limit }}
+          memory: {{ elasticsearch_memory_limit }}
+        requests:
+          cpu: {{ elasticsearch_cpu_request }}
+          memory: {{ elasticsearch_memory_request }}
+  visualization:
+    type: "kibana"
+    kibana:
+      {% if groups['infra'] | default([]) | length >= 3 %}
+      nodeSelector:
+        node-role.kubernetes.io/infra: ''
+      {% endif %}
+      resources:
+        limits:
+          cpu: {{ kibana_cpu_limit }}
+          memory: {{ kibana_memory_limit }}
+        requests:
+          cpu: {{ kibana_cpu_request }}
+          memory: {{ kibana_memory_request }}
+      replicas: 1
+  collection:
+    logs:
+      type: "fluentd"
+      fluentd:
+        resources:
+          limits:
+            cpu: {{ fluentd_cpu_limit }}
+            memory: {{ fluentd_memory_limit }}
+          requests:
+            cpu: {{ fluentd_cpu_request }}
+            memory: {{ fluentd_memory_request }}

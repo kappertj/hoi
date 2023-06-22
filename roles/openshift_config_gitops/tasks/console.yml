@@ -1,0 +1,55 @@
+- name: Ensure gitops directories exist
+  include_tasks:
+    file: create_gitops_dirs.yml
+  vars:
+    gitops_component: console
+    extra_dirs:
+    - files
+
+- name: Create Custom Logo File
+  copy:
+    dest: "{{ openshift_gitops_dir }}/console/files/custom-logo.svg"
+    content: |
+      {{ lookup('file', custom_logo_file) | indent(width=2) }}
+  when:
+  - custom_logo_file is defined
+  - "'branding' in openshift_components"
+
+- name: Create Console patch for custom logo
+  template:
+    src: console/console-logo-patch.yml.j2
+    dest: "{{ openshift_gitops_dir }}/console/patches/console-logo.yaml"
+  when:
+  - custom_logo_file is defined or custom_product_name is defined
+  - "'branding' in openshift_components"
+
+- name: Set custom console url
+  template:
+    src: console/custom_console_url.yml.j2
+    dest: "{{ openshift_gitops_dir }}/console/patches/custom_console_url.yaml"
+  when:
+  - custom_console_url is defined
+
+- name: create ConfigMapGenerator for branding files
+  set_fact:
+    console_extra_content:
+    - configMapGenerator:
+      - name: custom-logo
+        namespace: openshift-config
+        options:
+          disableNameSuffixHash: true
+          annotations:
+            argocd.argoproj.io/sync-options: Replace=true
+            argocd.argoproj.io/compare-options: IgnoreExtraneous
+        files:
+        - files/custom-logo.svg
+  when:
+  - custom_logo_file is defined
+  - "'branding' in openshift_components"
+
+- name: Generate kustomization file
+  include_tasks:
+    file: generate_kustomization.yml
+  vars:
+    gitops_component: console
+    gitops_component_extra_content: "{{ console_extra_content | default([]) }}"

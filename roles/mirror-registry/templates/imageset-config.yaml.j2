@@ -1,0 +1,35 @@
+#jinja2: lstrip_blocks: "True"
+apiVersion: mirror.openshift.io/v1alpha2
+kind: ImageSetConfiguration
+storageConfig:
+  registry:
+    imageURL: {{ mirror_registry.hostname }}:{{ mirror_registry.port }}/{{ mirror_registry.namespace }}
+    skipTLS: false
+mirror:
+  platform:
+    channels:
+    {% for imageset_platform_channel in mirror_registry_platform_channels %}
+    - name: {{ imageset_platform_channel.name }}
+      type: {{ imageset_platform_channel.type | default('ocp') }}
+      full: {{ imageset_platform_channel.full | default('false') }}
+      shortestPath: {{ imageset_platform_channel.shortest_path | default('false') }}
+      {% if imageset_platform_channel.min_version is defined %}
+      minVersion: {{ imageset_platform_channel.min_version }}
+      {% endif %}
+      {% if imageset_platform_channel.max_version is defined %}
+      maxVersion: {{ imageset_platform_channel.max_version }}
+      {% endif %}
+    {% endfor %}
+    graph: true
+
+  {% if mirror_registry_operator_catalogs | default([]) | length > 0 %}
+  operators:
+  {{ mirror_registry_operator_catalogs | indent(2)}}
+  {% endif %}
+
+  {% if mirror_registry_additional_images | default([]) | length > 0 %}
+  additionalImages:
+  {% for additional_image in mirror_registry_additional_images %}
+  - name: {{ additional_image }}
+  {% endfor %}
+  {% endif %}

@@ -1,0 +1,100 @@
+---
+# Requirements:
+# - Ensure access to the openshift cluster
+# - Ensure user has cluster-admin permissions
+# - Ensure an active 'oc login' session
+# - Provide a value for the variable "node", this should be the FQDN of the node
+# - The given node should be a member of the Ansible inventort group "storage"
+
+# Performing first part (gently remove the ndoe) of the solution described at:
+# - URL: https://access.redhat.com/documentation/en-us/red_hat_openshift_container_storage/4.6/html/replacing_nodes/openshift_container_storage_deployed_using_local_storage_devices#replacing-an-operational-node-using-local-storage-devices_bm-upi-failed
+
+# The second part of the playbook is called: add-ocs-node-to-cluster-post-config.yml
+
+- name: Prerequisite check for given OCS node {{ node }}
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: auto
+  tasks:
+  - name: Check if a single OCS node is given
+    assert:
+      that:
+      - node is defined
+      - node is string
+      - node in groups['storage']
+
+  - name: Get node {{ node }} state
+    k8s_info:
+      kind: Node
+      name: "{{ node }}"
+    register: node_info
+
+  - name: Check if node exist
+    assert:
+      that:
+      - node_info.resources | length > 0
+
+- name: Scale down required deployments on OCS node {{ node }}
+  hosts: "{{ groups['bastion'] }}"
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Get required pods
+    k8s_info:
+      kind: Pod
+      namespace: openshift-storage
+      field_selectors:
+      - spec.nodeName={{ node }}
+    register: pod_list
+
+  - name: Filter gathered pod list
+    set_fact:
+      pod_list_filtered: "{{ pod_list.resources | json_query(query) }}"
+    vars:
+      query: "[*].{ name: metadata.name, namespace: metadata.namespace, node: spec.nodeName, status: status.phase, labels: metadata.labels }"
+ 
+  - name: Scale down selected pods on OCS node {{ node }}
+    k8s_scale:
+      api_version: apps/v1
+      kind: Deployment 
+      name: "{% if item.labels.app == 'rook-ceph-mon' %}{{ item.labels.app }}-{{ item.labels.ceph_daemon_id }}{% elif item.labels.app == 'rook-ceph-osd' %}{{ item.labels.app }}-{{ item.labels['ceph-osd-id'] }}{% elif item.labels.app == 'rook-ceph-crashcollector' %}{{ item.labels.app }}-{{ item.node }}{% endif %}"
+      namespace: "{{ item.namespace }}"
+      replicas: 0
+      wait: no
+    loop: "{{ pod_list_filtered }}"
+    when:
+    - item.labels.app is defined
+    - (item.labels.app == "rook-ceph-mon") or
+      (item.labels.app == "rook-ceph-osd") or
+      (item.labels.app == "rook-ceph-crashcollector")
+
+- name: Set OCS node {{ node }} in maintenance mode and drain it.
+  import_playbook: set-node-maintenance-on.yml 
+
+- name: Delete OCS node {{ node }} from cluster
+  hosts: "{{ groups['bastion'] }}"
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Get node {{ node }} state
+    k8s_info:
+      kind: Node
+      name: "{{ node }}"
+    register: node_info
+
+  - name: Filter node object
+    set_fact:
+      node_info_status: "{{ node_info.resources | json_query(query) }}"
+    vars:
+      query: "[*].{ spec: spec, conditions: status.conditions }"
+
+  - name: Delete node {{ node }}
+    k8s:
+      kind: Node
+      name: "{{ node }}"
+      state: absent
+    register: node_deletion
+    when:
+    - node_info_status[0].spec.unschedulable

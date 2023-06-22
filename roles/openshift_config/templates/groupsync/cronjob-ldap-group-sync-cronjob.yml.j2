@@ -1,0 +1,50 @@
+kind: "CronJob"
+apiVersion: "batch/v1"
+metadata:
+  namespace: "{{ groupsync_cronjob_namespace }}"
+  name: ldap-group-sync
+  labels:
+    template: "cronjob-ldap-group-sync"
+spec:
+  schedule: "*/1 * * * *"
+  startingDeadlineSeconds: 3600
+  concurrencyPolicy: "Forbid"
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cronjob-ldap-group-sync
+            image: "{{ groupsync_cronjob_image }}:{{ groupsync_cronjob_image_version }}"
+            command:
+            - "/bin/bash"
+            - "-c"
+            - "oc adm groups sync --type=ldap --sync-config=/etc/config/ldap-group-sync.yaml --confirm {% if groupsync_groups | length > 0 %}--whitelist=/etc/config/whitelist.txt {% endif %} || :"
+            volumeMounts:
+            - mountPath: "/etc/config"
+              name: "ldap-sync-volume"
+            - mountPath: "/pki"
+              name: ldap-ca-volume
+          volumes:
+          - configMap:
+              items:
+              - key: ldap-ca.pem
+                path: ldap-ca.pem
+              name: ldap-ca-config
+            name: ldap-ca-volume
+          - configMap:
+              items:
+              - key: ldap-sync.yml
+                path: ldap-group-sync.yaml
+              - key: whitelist.txt
+                path: whitelist.txt
+              name: ldap-config
+            name: ldap-sync-volume
+          restartPolicy: "Never"
+          terminationGracePeriodSeconds: 30
+          activeDeadlineSeconds: 500
+          dnsPolicy: "ClusterFirst"
+          serviceAccountName: "ldap-group-syncer"
+          serviceAccount: "ldap-group-syncer"

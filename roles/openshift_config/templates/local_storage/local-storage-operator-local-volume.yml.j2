@@ -1,0 +1,26 @@
+#jinja2: lstrip_blocks: True
+apiVersion: "local.storage.openshift.io/v1"
+kind: "LocalVolume"
+metadata:
+  name: "local-disks-{{ item }}"
+  namespace: "{{ local_storage_operator_namespace }}"
+spec:
+  nodeSelector: 
+    nodeSelectorTerms:
+    - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - "{{ item }}"
+  storageClassDevices:
+  {% for storageclass in hostvars[item].local_storage | json_query('[*].storageclass') | unique %}
+    - storageClassName: {{ storageclass }}
+      volumeMode: Filesystem
+      fsType: xfs
+      devicePaths:
+      {% for storageclass_entry in hostvars[item].local_storage %}
+      {% if storageclass_entry.storageclass == storageclass %}
+      - {{ storageclass_entry.device }}
+      {% endif %}
+      {% endfor %}
+  {% endfor %}
