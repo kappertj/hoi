@@ -1,44 +1,43 @@
 ---
 # tasks file for create_iscsi_pvs
 - name: debug
-  debug:
+  loop: "{{ iscsi_pvs }}"
+  ansible.builtin.debug:
     verbosity: 1
     msg: "{{ lookup('template', 'create_iscsi_pvs/iscsi-pv.yml.j2') }}"
-  loop: "{{ iscsi_pvs }}" 
 
 - name: List required storageclasses
-  set_fact:
+  ansible.builtin.set_fact:
     iscsi_required_storageclass: "{{ iscsi_pvs | json_query('[*].storageclass') | unique }}"
 
 - name: List storageclasse
-  debug:
+  loop: "{{ iscsi_required_storageclass }}"
+  ansible.builtin.debug:
     verbosity: 1
     msg: "{{ item }}"
-  loop: "{{ iscsi_required_storageclass }}"
 
 - name: Break for deugging
-  assert:
-    that: false
   when: break is defined
+  ansible.builtin.assert:
+    that: false
 
 - name: Create iSCSI storageclasses
-  k8s:
+  loop: "{{ iscsi_required_storageclass }}"
+
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'create_iscsi_pvs/storageclass.yml.j2') | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
-  loop: "{{ iscsi_required_storageclass }}" 
-
+      - strategic-merge
+      - merge
 
 - name: Create iSCSI PVs
-  k8s:
+  loop: "{{ iscsi_pvs }}"
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'create_iscsi_pvs/iscsi-pv.yml.j2') | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
-  loop: "{{ iscsi_pvs }}" 
-
+      - strategic-merge
+      - merge

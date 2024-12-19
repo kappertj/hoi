@@ -1,8 +1,9 @@
+---
 extra_disks:
-- name: logging
-  size: 200G
-- name: metrics
-  size: 200G
+  - name: logging
+    size: 200G
+  - name: metrics
+    size: 200G
 
 image_size: 120G
 

@@ -1,5 +1,6 @@
+---
 local_storage:
-- device: /dev/vdb
-  storageclass: logging
-- device: /dev/vdc
-  storageclass: metrics
+  - device: /dev/vdb
+    storageclass: logging
+  - device: /dev/vdc
+    storageclass: metrics

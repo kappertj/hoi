@@ -1,51 +1,51 @@
 ---
 # tasks file for deploy-cluster-logging---
 - name: Deploy Objects
-  k8s:
+  loop:
+    - elasticsearch-operator-namespace.yml.j2
+    - elasticsearch-operatorgroup.yml.j2
+    - elasticsearch-subscription.yml.j2
+    - elasticsearch-prometheus-role.yml.j2
+    - elasticsearch-prometheus-rolebinding.yml.j2
+    - cluster-logging-namespace.yml.j2
+    - cluster-logging-operatorgroup.yml.j2
+    - cluster-logging-subscription.yml.j2
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'cluster-logging/' + item) | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
-  loop:
-  - elasticsearch-operator-namespace.yml.j2
-  - elasticsearch-operatorgroup.yml.j2
-  - elasticsearch-subscription.yml.j2
-  - elasticsearch-prometheus-role.yml.j2
-  - elasticsearch-prometheus-rolebinding.yml.j2
-  - cluster-logging-namespace.yml.j2
-  - cluster-logging-operatorgroup.yml.j2
-  - cluster-logging-subscription.yml.j2
+      - strategic-merge
+      - merge
 
 - name: Wait for operator CRDs to appear
-  k8s_info:
-    kubeconfig: "{{ openshift_kubeconfig }}"
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: "{{ item }}"
   register: crds
   until: ( crds.resources | length ) > 0
   retries: 100
   loop:
-  - elasticsearches.logging.openshift.io
-  - clusterloggings.logging.openshift.io
- 
-- name: debug CRDS 
-  debug:
+    - elasticsearches.logging.openshift.io
+    - clusterloggings.logging.openshift.io
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "{{ item }}"
+
+- name: debug CRDS
+  ansible.builtin.debug:
     verbosity: 1
     msg: |
       {{ crds }}
 
 - name: Deploy Objects
-  k8s:
+  loop:
+    - cluster-logging.yml.j2
+    - curator-configmap.yml.j2
+    - logforwarding.yml.j2
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'cluster-logging/' + item) | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
-  loop:
-  - cluster-logging.yml.j2
-  - curator-configmap.yml.j2
-  - logforwarding.yml.j2
+      - strategic-merge
+      - merge

@@ -1,5 +1,6 @@
+---
 - name: Prompt to continue
-  pause:
+  ansible.builtin.pause:
     prompt: |
       For all systems that have their `install_method` set to `iso` grab
       the generated iso out of the `/var/www/html` directory on {{ bastion_host }}

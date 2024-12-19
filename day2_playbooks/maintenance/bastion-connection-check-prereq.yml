@@ -6,56 +6,56 @@
   connection: local
   gather_facts: false
   tasks:
-  - name: Check network resources @ Red Hat
-    wait_for:
-      host: "{{ item.host }}"
-      port: "{{ item.port }}"
-      timeout: 15
-    loop:
-    - { "host": "registry.redhat.io", "port": 80 }
-    - { "host": "registry.redhat.io", "port": 443 }
-    - { "host": "quay.io", "port": 80 }
-    - { "host": "quay.io", "port": 443 }
-    - { "host": "sso.redhat.com", "port": 80 }
-    - { "host": "sso.redhat.com", "port": 443 }
-    - { "host": "openshift.org", "port": 80 }
-    - { "host": "openshift.org", "port": 443 }
-    - { "host": "cert-api.access.redhat.com", "port": 80 }
-    - { "host": "cert-api.access.redhat.com", "port": 443 }
-    - { "host": "api.access.redhat.com", "port": 80 }
-    - { "host": "api.access.redhat.com", "port": 443 }
-    - { "host": "infogw.api.openshift.com", "port": 80 }
-    - { "host": "infogw.api.openshift.com", "port": 443 }
-    - { "host": "cloud.redhat.com", "port": 80 }
-    - { "host": "cloud.redhat.com", "port": 443 }
-    - { "host": "mirror.openshift.com", "port": 80 }
-    - { "host": "mirror.openshift.com", "port": 443 }
-    - { "host": "storage.googleapis.com", "port": 80 }
-    - { "host": "storage.googleapis.com", "port": 443 }
-    - { "host": "quay-registry.s3.amazonaws.com", "port": 80 }
-    - { "host": "quay-registry.s3.amazonaws.com", "port": 443 }
-    - { "host": "api.openshift.com", "port": 80 }
-    - { "host": "art-rhcos-ci.s3.amazonaws.com", "port": 443 }
-    - { "host": "api.openshift.com", "port": 80 }
-    - { "host": "api.openshift.com", "port": 443 }
-    - { "host": "registry.access.redhat.com", "port": 80 }
-    - { "host": "registry.access.redhat.com", "port": 443 }
+    - name: Check network resources @ Red Hat
+      wait_for:
+        host: "{{ item.host }}"
+        port: "{{ item.port }}"
+        timeout: 15
+      loop:
+        - { host: registry.redhat.io, port: 80 }
+        - { host: registry.redhat.io, port: 443 }
+        - { host: quay.io, port: 80 }
+        - { host: quay.io, port: 443 }
+        - { host: sso.redhat.com, port: 80 }
+        - { host: sso.redhat.com, port: 443 }
+        - { host: openshift.org, port: 80 }
+        - { host: openshift.org, port: 443 }
+        - { host: cert-api.access.redhat.com, port: 80 }
+        - { host: cert-api.access.redhat.com, port: 443 }
+        - { host: api.access.redhat.com, port: 80 }
+        - { host: api.access.redhat.com, port: 443 }
+        - { host: infogw.api.openshift.com, port: 80 }
+        - { host: infogw.api.openshift.com, port: 443 }
+        - { host: cloud.redhat.com, port: 80 }
+        - { host: cloud.redhat.com, port: 443 }
+        - { host: mirror.openshift.com, port: 80 }
+        - { host: mirror.openshift.com, port: 443 }
+        - { host: storage.googleapis.com, port: 80 }
+        - { host: storage.googleapis.com, port: 443 }
+        - { host: quay-registry.s3.amazonaws.com, port: 80 }
+        - { host: quay-registry.s3.amazonaws.com, port: 443 }
+        - { host: api.openshift.com, port: 80 }
+        - { host: art-rhcos-ci.s3.amazonaws.com, port: 443 }
+        - { host: api.openshift.com, port: 80 }
+        - { host: api.openshift.com, port: 443 }
+        - { host: registry.access.redhat.com, port: 80 }
+        - { host: registry.access.redhat.com, port: 443 }
 
-  - name: Check url resources @ Red Hat
-    uri:
-      url: "{{ item }}"
-      timeout: 15
-    loop:
-    #- https://cloud.redhat.com/api/ingress
-    #- http://cloud.redhat.com/api/ingress
-    - https://storage.googleapis.com/openshift-release
-    - http://storage.googleapis.com/openshift-release
-    - https://cloud.redhat.com/openshift
-    - http://cloud.redhat.com/openshift
+    - name: Check url resources @ Red Hat
+      uri:
+        url: "{{ item }}"
+        timeout: 15
+      loop:
+        #- https://cloud.redhat.com/api/ingress
+        #- http://cloud.redhat.com/api/ingress
+        - https://storage.googleapis.com/openshift-release
+        - http://storage.googleapis.com/openshift-release
+        - https://cloud.redhat.com/openshift
+        - http://cloud.redhat.com/openshift
 
-  - name: Check url resources @ other
-    uri:
-      url: "{{ item }}"
-      timeout: 15
-    loop:
-    - https://raw.githubusercontent.com
+    - name: Check url resources @ other
+      uri:
+        url: "{{ item }}"
+        timeout: 15
+      loop:
+        - https://raw.githubusercontent.com

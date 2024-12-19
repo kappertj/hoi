@@ -1,19 +1,22 @@
+---
 - name: Set base initramfs path
-  set_fact:
+  ansible.builtin.set_fact:
     coreos_baseinitramfs_file: "{{ '/var/www/html/coreos/' + ( install_version ) + '/' + ( coreos_urls.initramfs.url | basename ) }}"
 
 - name: Delete any old custom initramfs
-  file:
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.file:
     path: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.initramfs"
     state: absent
-  delegate_to: "{{ bastion_host }}"
 
 - name: Create custom initramfs for host
-  command: "{{ coreos_installer_command }} pxe customize {% for file in nmconnection_files.files %}--network-keyfile {{ file.path }} {% endfor %} --dest-device=/dev/{{ install_dev }} --dest-ignition /var/www/html/{{ inventory_hostname }}.ign --dest-karg-append console=tty0 --dest-karg-append console=ttyS0 --dest-karg-append nomodeset -o {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.initramfs {{ coreos_baseinitramfs_file }}"
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.command: "{{ coreos_installer_command }} pxe customize {% for file in nmconnection_files.files %}--network-keyfile {{ file.path }} {% endfor %}
+    --dest-device=/dev/{{ install_dev }} --dest-ignition /var/www/html/{{ inventory_hostname }}.ign --dest-karg-append console=tty0 --dest-karg-append console=ttyS0
+    --dest-karg-append nomodeset -o {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.initramfs {{ coreos_baseinitramfs_file }}"
 
 - name: Set permissions to allow downloading initramfs
-  file:
-    path: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.initramfs"
-    mode: 0644
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.file:
+    path: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.initramfs"
+    mode: 420

@@ -1,8 +1,7 @@
 ---
 - name: Configure self-provisioners
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'self-provisioners/self-provisioners.yml.j2') | from_yaml }}"
-    force: yes
-
+    force: true

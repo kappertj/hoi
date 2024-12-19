@@ -1,19 +1,19 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: compliance-operator
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Set custom Compliance Operator subscription channel
-  template:
+  when:
+    - compliance_operator_channel is defined
+  ansible.builtin.template:
     src: compliance_operator/subscription-patch.yml.j2
     dest: "{{ openshift_gitops_dir }}/compliance-operator/patches/subscription-channel.yaml"
-  when:
-  - compliance_operator_channel is defined
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: compliance-operator
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

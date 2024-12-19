@@ -1,105 +1,105 @@
 ---
 - name: Create namespace with open nodeSelector
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/namespace.yml.j2') | from_yaml }}"
 
 - name: Add subscription for OpenShift GitOps Operator
-  k8s:
+  loop:
+    - deploy_gitops/subscription.yml.j2
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', item) | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
-  loop:
-  - deploy_gitops/subscription.yml.j2
+      - strategic-merge
+      - merge
 
 - name: Include wait for CRDS
-  include_tasks: wait_for_crds.yml
   vars:
     wait_for_crds:
-    - applications.argoproj.io
-    - applicationsets.argoproj.io
-    - gitopsservices.pipelines.openshift.io
+      - applications.argoproj.io
+      - applicationsets.argoproj.io
+      - gitopsservices.pipelines.openshift.io
+  ansible.builtin.include_tasks: wait_for_crds.yml
 
 - name: Wait for ArgoCD CR to appear
-  k8s_info:
+  register: wait_for_argocd
+  until:
+    - wait_for_argocd.resources is defined
+    - ( wait_for_argocd.resources | length ) > 0
+  retries: 100
+  kubernetes.core.k8s_info:
     kubeconfig: "{{ openshift_kubeconfig }}"
     api_version: argoproj.io/v1alpha1
     kind: ArgoCD
     name: openshift-gitops
     namespace: openshift-gitops
-  register: wait_for_argocd
-  until:
-  - wait_for_argocd.resources is defined
-  - ( wait_for_argocd.resources | length ) > 0
-  retries: 100
 
 - name: Patch Cluster ArgoCD to run on infra
-  k8s:
+  when:
+    - groups['infra'] | default([]) | length > 0
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/gitopsservice.yml.j2') | from_yaml }}"
-  when:
-  - groups['infra'] | default([]) | length > 0
 
 - name: Patch Cluster ArgoCD to use reencrypt route
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/argocd-server-reencrypt.yml.j2') | from_yaml }}"
 
 - name: Patch Cluster ArgoCD for custom RBAC
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/argocd-rbac.yml.j2') | from_yaml }}"
 
 - name: Patch Cluster ArgoCD for resource tracking using label and instance-id annotation
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/argocd-tracking.yml.j2') | from_yaml }}"
 
 - name: Patch Cluster ArgoCD for initial SSH Known Hosts
-  k8s:
+  when:
+    - openshift_gitops_repo_known_hosts is defined
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/argocd-ssh-known-hosts.yml.j2') | from_yaml }}"
-  when:
-  - openshift_gitops_repo_known_hosts is defined
 
 - name: Delete existing Known Hosts CM to make ArgoCD update it
-  k8s:
+  when:
+    - openshift_gitops_repo_known_hosts is defined
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: absent
     api_version: v1
     kind: ConfigMap
     namespace: openshift-gitops
     name: argocd-ssh-known-hosts-cm
-  when:
-  - openshift_gitops_repo_known_hosts is defined
 
 - name: Add Application that adds roles and rolebinding
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/clusterrolebindings-app.yml.j2') | from_yaml }}"
 
 - name: Get SSH privkey for repo
-  slurp:
-    src: "{{ openshift_gitops_repo_ssh_privkey_file }}"
   register: openshift_gitops_repo_ssh_privkey_content
   when:
-  - openshift_gitops_repo_ssh_privkey_file is defined
+    - openshift_gitops_repo_ssh_privkey_file is defined
+  ansible.builtin.slurp:
+    src: "{{ openshift_gitops_repo_ssh_privkey_file }}"
 
 - name: Create secret for repo base
-  k8s:
+  when:
+    - openshift_gitops_repo_ssh_privkey_file is defined
+    - openshift_gitops_upstream_base_private | default(false)
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_gitops/repo_base.yml.j2') | from_yaml }}"
-  when:
-  - openshift_gitops_repo_ssh_privkey_file is defined
-  - openshift_gitops_upstream_base_private | default(false) 

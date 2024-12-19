@@ -1,26 +1,27 @@
+---
 network_config:
-# First device is also normal bootdev
-- device: bond0
-  address: 192.168.0.100
-  netmask: 255.255.255.0
-  gateway: 192.168.0.254
-  is_default_gateway: True
-  dns:
-  - 192.168.0.1
-  - 8.8.8.8
-  bonding_opts:
-  - "mode=802.3ad"
-  - "lacp_rate=0"
-  - "miimon=100"
-  - "updelay=1000"
-  - "downdelay=1000"
-  slaves:
-  - eth0
-  - eth1
-  vlan: 100
-- device: eth2
-  address: 192.168.1.100
-  netmask: 255.255.255.0
-  gateway: 192.168.1.1
-  nicboot: NicBoot1
-  initial_boot_from_network: True
+  # First device is also normal bootdev
+  - device: bond0
+    address: 192.168.0.100
+    netmask: 255.255.255.0
+    gateway: 192.168.0.254
+    is_default_gateway: true
+    dns:
+      - 192.168.0.1
+      - 8.8.8.8
+    bonding_opts:
+      - mode=802.3ad
+      - lacp_rate=0
+      - miimon=100
+      - updelay=1000
+      - downdelay=1000
+    slaves:
+      - eth0
+      - eth1
+    vlan: 100
+  - device: eth2
+    address: 192.168.1.100
+    netmask: 255.255.255.0
+    gateway: 192.168.1.1
+    nicboot: NicBoot1
+    initial_boot_from_network: true

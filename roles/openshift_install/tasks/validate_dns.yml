@@ -1,11 +1,14 @@
+---
 - name: Get DNS record
-  set_fact:
-    dns_ip: "{{ lookup('dig', item) }}"
   delegate_to: "{{ bastion_host }}"
-  run_once: True
+  run_once: true
+  ansible.builtin.set_fact:
+    dns_ip: "{{ lookup('dig', item) }}"
 
 - name: Abort if DNS entry can not be found
-  assert:
+  run_once: true
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.assert:
     success_msg: |
       {{ item }} resolves to: {{ dns_ip }}
     fail_msg: |
@@ -15,6 +18,4 @@
       {{ item }} resolves to: {{ dns_ip }}
       {% endif %}
     that:
-    - dns_ip != 'NXDOMAIN'
-  run_once: True
-  delegate_to: "{{ bastion_host }}"
+      - dns_ip != 'NXDOMAIN'

@@ -1,18 +1,19 @@
+---
 install_version_major_minor: "{{ install_version | regex_replace('^([0-9]+\\.[0-9]+).*$', '\\1') }}"
 
 openshift_ignition_dir: /opt/openshift_files/{{ cluster }}/ignition
 openshift_kubeconfig: "{{ openshift_ignition_dir }}/auth/kubeconfig"
 
-kubeseal_version: 0.22.0
+kubeseal_version: "0.22.0"
 
 kubeseal_download_url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ kubeseal_version }}/kubeseal-{{ kubeseal_version }}-linux-amd64.tar.gz
 
 kubeseal_cert_dir: /opt/openshift_files/{{ cluster }}/kubeseal
 kubeseal_cert: "{{ kubeseal_cert_dir }}/kubeseal.pem"
 
-kubeseal_command: "/usr/local/bin/kubeseal --kubeconfig={{ openshift_kubeconfig }} --controller-namespace=openshift-sealed-secrets"
+kubeseal_command: /usr/local/bin/kubeseal --kubeconfig={{ openshift_kubeconfig }} --controller-namespace=openshift-sealed-secrets
 
-openshift_gitops_dir: "/opt/openshift_files/{{ cluster }}/gitops"
+openshift_gitops_dir: /opt/openshift_files/{{ cluster }}/gitops
 openshift_gitops_repo_version: main
 #openshift_gitops_ssh_privkey_file: "/opt/openshift_files/{{ cluster }}/keys/gitops.rsa"
 
@@ -23,12 +24,11 @@ etcd_encryption: true
 certificate_expiry_limit_days: 30
 
 openshift_ingress_controllers: []
-
 ntp_servers:
-- 0.pool.ntp.org
-- 1.pool.ntp.org
-- 2.pool.ntp.org
-- 3.pool.ntp.org
+  - "0.pool.ntp.org"
+  - 1.pool.ntp.org
+  - 2.pool.ntp.org
+  - 3.pool.ntp.org
 
 custom_logo_file: hcs-ocp-logo.svg
 custom_background_file: hcs-ocp-background.svg
@@ -37,20 +37,18 @@ custom_product_disclaimer_body: ""
 custom_product_disclaimer_footer: ""
 
 extra_node_labels: {}
-
 registry_storage_claim_name: "{{ cluster }}-registry-claim"
 
 self_provisioners:
   remove_default: false
   users: []
   groups: []
-
-odf_storage_operator_channel: "stable-{{ install_version }}"
+odf_storage_operator_channel: stable-{{ install_version }}
 odf_storage_cluster_disk_count: 1
-odf_prefix: "odf"
+odf_prefix: odf
 odf_replica: 3
 
-monitoring_user_workload_enabled: False
+monitoring_user_workload_enabled: false
 
 elasticsearch_replicas: 3
 elasticsearch_storageclass: logging
@@ -71,12 +69,11 @@ fluentd_memory_request: 1Gi
 fluentd_cpu_limit: 1
 fluentd_cpu_request: 200m
 
-servicemesh_install_elasticsearch: True
+servicemesh_install_elasticsearch: true
 
-trident_version: "22.07.0"
-trident_operator_download_url: "https://github.com/NetApp/trident/releases/download/v{{ trident_version }}/trident-installer-{{trident_version}}.tar.gz"
+trident_version: 22.07.0
+trident_operator_download_url: https://github.com/NetApp/trident/releases/download/v{{ trident_version }}/trident-installer-{{trident_version}}.tar.gz
 trident_backends: []
-
 metallb:
   asn: 64513
   addresspools: []
@@ -86,32 +83,31 @@ metallb:
   add_default_ingress_service: false
 
 allowedregistries: []
-
 openshift_components:
-- allowedregistries
-- apiserver
-- branding
-- cicd-operators
-- cis_compliance
-- compliance_operator
-- console
-- create_applicationset
-- deploy_gitops
-- groupsync
-- ingress
-- local_storage
-- logging
-- machineconfigs
-- metallb
-- monitoring
-- network-policies
-- nfs_subdir_provisioner
-- nodemaintenanceoperator
-- oauth
-- odf_storage
-- proxy
-- registry
-- sealed_secrets
-- servicemesh
-- setup_git
-- trident
+  - allowedregistries
+  - apiserver
+  - branding
+  - cicd-operators
+  - cis_compliance
+  - compliance_operator
+  - console
+  - create_applicationset
+  - deploy_gitops
+  - groupsync
+  - ingress
+  - local_storage
+  - logging
+  - machineconfigs
+  - metallb
+  - monitoring
+  - network-policies
+  - nfs_subdir_provisioner
+  - nodemaintenanceoperator
+  - oauth
+  - odf_storage
+  - proxy
+  - registry
+  - sealed_secrets
+  - servicemesh
+  - setup_git
+  - trident

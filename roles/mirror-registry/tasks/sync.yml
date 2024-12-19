@@ -1,74 +1,75 @@
 ---
 - name: Ensure Registry installer dir exists
-  file:
+  ansible.builtin.file:
     path: "{{ registry_installer_dir }}"
     state: directory
 
 - name: Download and extract oc-mirror tool
-  unarchive:
+  tags:
+    - download
+  ansible.builtin.unarchive:
     src: "{{ mirror_registry_oc_plugin_url }}"
     remote_src: true
     dest: "{{ registry_installer_dir }}"
     extra_opts: oc-mirror
-  tags:
-  - download
 
 - name: Make oc-mirror executable
-  file:
-    path: "{{ registry_installer_dir }}/oc-mirror"
-    mode: 0755
   tags:
-  - download
+    - download
+  ansible.builtin.file:
+    path: "{{ registry_installer_dir }}/oc-mirror"
+    mode: 493
 
 - name: Template imageset-configuration
-  template:
+  ansible.builtin.template:
     src: imageset-config.yaml.j2
     dest: "{{ mirror_registry.directory }}/imageset-config.yaml"
 
 - name: Generate mirror-registry credentials
-  set_fact:
+  ansible.builtin.set_fact:
     mirror_registry_auth: "{{ lookup('template', 'registry_auth.yaml.j2') }}"
 
 - name: Debug auth
-  debug:
+  ansible.builtin.debug:
     verbosity: 2
     var: mirror_registry_auth
 
 - name: Write a backup of registry auth to disk
-  copy:
+  ansible.builtin.copy:
     content: "{{ mirror_registry_auth | to_nice_json(indent=2) }}"
     dest: "{{ registry_installer_dir }}/pullsecret.json"
-    mode: 0640
+    mode: 416
 
-- name: Merge auth into openshift pull secret 
-  set_fact:
+- name: Merge auth into openshift pull secret
+  ansible.builtin.set_fact:
     #combined_docker_auth: " {{ mirror_registry_auth | ansible.builtin.combine(openshift_pullsecret, recursive=True)}}"
     combined_docker_auth: " {{ mirror_registry_auth | ansible.builtin.combine(openshift_pullsecret, recursive=True) | to_nice_json(indent=2) }}"
 
 - name: Debug auth
-  debug:
+  ansible.builtin.debug:
     verbosity: 2
     var: combined_docker_auth
 
 - name: Ensure that ~/.docker exists as a directory
-  file:
+  ansible.builtin.file:
     path: ~/.docker
     state: directory
-    mode: 0750
+    mode: 488
 
 - name: Copy pull-secret to .docker folder for oc-mirror usage
-  copy:
+  ansible.builtin.copy:
     content: "{{ combined_docker_auth }}"
     dest: ~/.docker/config.json
-    mode: 0640 
+    mode: 416
 
 - name: Debug catalogs to sync
-  debug:
+  ansible.builtin.debug:
     verbosity: 2
     var: mirror_registry_operator_catalogs
 
 - name: Sync from registry.redhat.io
-  command:
+  ansible.builtin.command:
     chdir: "{{ mirror_registry.directory }}"
-    cmd: "{{ registry_installer_dir }}/oc-mirror --config={{ mirror_registry.directory}}/imageset-config.yaml docker://{{ mirror_registry.hostname }}:{{ mirror_registry.port }} --continue-on-error"
+    cmd: "{{ registry_installer_dir }}/oc-mirror --config={{ mirror_registry.directory}}/imageset-config.yaml docker://{{ mirror_registry.hostname }}:{{ mirror_registry.port
+      }} --continue-on-error"
   #command: "{{ openshift_installer_dir }}/oc-mirror --config={{ mirror_registry.directory}}/imageset-config.yaml docker://{{ mirror_registry.hostname }}:{{ mirror_registry.port }}"

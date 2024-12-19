@@ -1,12 +1,11 @@
+---
 all:
 ocp:
   children:
     bastion:
-      hosts:
-        bastion.example.com
+      hosts: bastion.example.com
     mirror:
-      hosts:
-        mirror.example.com
+      hosts: mirror.example.com
     bootstrap:
       hosts:
         bootstrap.example.com:

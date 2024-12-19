@@ -1,290 +1,291 @@
+---
 - name: routercerts_verify
-  include_tasks:
-    file: verify_certs.yml
-    apply:
-      tags:
-      - routercerts
   loop: "{{ routercerts_certificates }}"
   loop_control:
     loop_var: certificate
     label: certificate.name
   when: "'routercerts' in openshift_components"
   tags:
-  - routercerts
+    - routercerts
   vars:
     cert_hostname: "{{ certificate.hostname | default('*.apps.'+cluster+'.'+base_domain) }}"
-
-- name: apiserver_certs_verify
-  include_tasks:
+  ansible.builtin.include_tasks:
     file: verify_certs.yml
     apply:
       tags:
-      - apiserver_certs
+        - routercerts
+
+- name: apiserver_certs_verify
   vars:
     certificate: "{{ apiserver_certificate }}"
     cert_hostname: "{{ certificate.hostname | default('api.'+cluster+'.'+base_domain) }}"
   when: "'apiserver_certs' in openshift_components"
   tags:
-  - apiserver_certs
+    - apiserver_certs
+  ansible.builtin.include_tasks:
+    file: verify_certs.yml
+    apply:
+      tags:
+        - apiserver_certs
 
 - name: create chrony machineConfigs
-  include_tasks:
+  when:
+    - "'chrony' in openshift_components"
+    - ntp_servers is defined
+  tags:
+    - chrony
+  ansible.builtin.include_tasks:
     file: chrony.yml
     apply:
       tags:
-      - chrony
-  when:
-  - "'chrony' in openshift_components"
-  - ntp_servers is defined
-  tags:
-  - chrony
+        - chrony
 
 - name: create_iscsi_pvs
-  include_tasks:
+  when: "'iscsi_pvs' in openshift_components"
+  tags:
+    - iscsi_pvs
+  ansible.builtin.include_tasks:
     file: create_iscsi_pvs.yml
     apply:
       tags:
-      - iscsi_pvs
-  when: "'iscsi_pvs' in openshift_components"
-  tags:
-  - iscsi_pvs
+        - iscsi_pvs
 
 - name: create local storage
-  include_tasks:
+  when: "'local_storage' in openshift_components"
+  tags:
+    - local_storage
+  ansible.builtin.include_tasks:
     file: local_storage.yml
     apply:
       tags:
-      - local_storage
-  when: "'local_storage' in openshift_components"
-  tags:
-  - local_storage
+        - local_storage
 
 - name: nfs_client_provisioner
-  include_tasks:
+  when: "'nfs_client_provisioner' in openshift_components"
+  tags:
+    - nfs_client_provisioner
+  ansible.builtin.include_tasks:
     file: nfs_client_provisioner.yml
     apply:
       tags:
-      - nfs_client_provisioner
-  when: "'nfs_client_provisioner' in openshift_components"
-  tags:
-  - nfs_client_provisioner
+        - nfs_client_provisioner
 
 - name: ocs_storage
-  include_tasks:
+  when: "'ocs_storage' in openshift_components"
+  tags:
+    - ocs_storage
+  ansible.builtin.include_tasks:
     file: ocs_storage.yml
     apply:
       tags:
-      - ocs_storage
-  when: "'ocs_storage' in openshift_components"
-  tags:
-  - ocs_storage
+        - ocs_storage
 
 - name: move_to_infra
-  include_tasks:
+  when: groups['infra'] | length > 0
+  tags:
+    - move_to_infra
+  ansible.builtin.include_tasks:
     file: move_to_infra.yml
     apply:
       tags:
-      - move_to_infra
-  when: "groups['infra'] | length > 0"
-  tags:
-  - move_to_infra
+        - move_to_infra
 
 - name: monitoring_storage
-  include_tasks:
+  when: "'monitoring_storage' in openshift_components"
+  tags:
+    - monitoring_storage
+  ansible.builtin.include_tasks:
     file: monitoring_storage.yml
     apply:
       tags:
-      - monitoring_storage
-  when: "'monitoring_storage' in openshift_components"
-  tags:
-  - monitoring_storage
+        - monitoring_storage
 
 - name: registry_storage
-  include_tasks:
+  when: "'registry_storage' in openshift_components"
+  tags:
+    - registry_storage
+  ansible.builtin.include_tasks:
     file: registry_storage.yml
     apply:
       tags:
-      - registry_storage
-  when: "'registry_storage' in openshift_components"
-  tags:
-  - registry_storage
+        - registry_storage
 
 - name: cluster_logging
-  include_tasks:
+  when: "'cluster_logging' in openshift_components"
+  tags:
+    - cluster_logging
+  ansible.builtin.include_tasks:
     file: cluster_logging.yml
     apply:
       tags:
-      - cluster_logging
-  when: "'cluster_logging' in openshift_components"
-  tags:
-  - cluster_logging
+        - cluster_logging
 
 - name: eventrouter
-  include_tasks:
+  when: "'eventrouter' in openshift_components"
+  tags:
+    - eventrouter
+  ansible.builtin.include_tasks:
     file: eventrouter.yml
     apply:
       tags:
-      - eventrouter
-  when: "'eventrouter' in openshift_components"
-  tags:
-  - eventrouter
+        - eventrouter
 
 - name: network_policies
-  include_tasks:
+  when: "'network_policies' in openshift_components"
+  tags:
+    - network_policies
+  ansible.builtin.include_tasks:
     file: network_policies.yml
     apply:
       tags:
-      - network_policies
-  when: "'network_policies' in openshift_components"
-  tags:
-  - network_policies
+        - network_policies
 
 - name: deploy_tekton
-  include_tasks:
+  when: "'deploy_tekton' in openshift_components"
+  tags:
+    - deploy_tekton
+  ansible.builtin.include_tasks:
     file: deploy_tekton.yml
     apply:
       tags:
-      - deploy_tekton
-  when: "'deploy_tekton' in openshift_components"
-  tags:
-  - deploy_tekton
+        - deploy_tekton
 
 - name: deploy_gitops
-  include_tasks:
+  when: "'deploy_gitops' in openshift_components"
+  tags:
+    - deploy_gitops
+  ansible.builtin.include_tasks:
     file: deploy_gitops.yml
     apply:
       tags:
-      - deploy_gitops
-  when: "'deploy_gitops' in openshift_components"
-  tags:
-  - deploy_gitops
+        - deploy_gitops
 
 - name: imagepruner
-  include_tasks:
+  when: "'imagepruner' in openshift_components"
+  tags:
+    - imagepruner
+  ansible.builtin.include_tasks:
     file: imagepruner.yml
     apply:
       tags:
-      - imagepruner
-  when: "'imagepruner' in openshift_components"
-  tags:
-  - imagepruner
+        - imagepruner
 
 - name: oauth
-  include_tasks:
+  when: "'oauth' in openshift_components"
+  tags:
+    - oauth
+  ansible.builtin.include_tasks:
     file: oauth.yml
     apply:
       tags:
-      - oauth
-  when: "'oauth' in openshift_components"
-  tags:
-  - oauth
+        - oauth
 
 - name: self_provisioners
-  include_tasks:
+  when: "'self_provisioners' in openshift_components"
+  tags:
+    - self_provisioners
+  ansible.builtin.include_tasks:
     file: self_provisioners.yml
     apply:
       tags:
-      - self_provisioners
-  when: "'self_provisioners' in openshift_components"
-  tags:
-  - self_provisioners
+        - self_provisioners
 
 - name: groupsync
-  include_tasks:
+  when: "'groupsync' in openshift_components"
+  tags:
+    - groupsync
+  ansible.builtin.include_tasks:
     file: groupsync.yml
     apply:
       tags:
-      - groupsync
-  when: "'groupsync' in openshift_components"
-  tags:
-  - groupsync
+        - groupsync
 
 - name: azure_groupsync
-  include_tasks:
+  when: "'azure_groupsync' in openshift_components"
+  tags:
+    - azure_groupsync
+  ansible.builtin.include_tasks:
     file: azure_groupsync.yml
     apply:
       tags:
-      - azure_groupsync
-  when: "'azure_groupsync' in openshift_components"
-  tags:
-  - azure_groupsync
+        - azure_groupsync
 
 - name: alertmanager
-  include_tasks:
+  when: ('alertmanager' in openshift_components) and alertmanager_config is defined
+  tags:
+    - alertmanager
+  ansible.builtin.include_tasks:
     file: alertmanager.yml
     apply:
       tags:
-      - alertmanager
-  when: "('alertmanager' in openshift_components) and alertmanager_config is defined" 
-  tags:
-  - alertmanager
+        - alertmanager
 
 - name: custom_logo
-  include_tasks:
+  when: "'custom_logo' in openshift_components"
+  tags:
+    - custom_logo
+  ansible.builtin.include_tasks:
     file: custom_logo.yml
     apply:
       tags:
-      - custom_logo
-  when: "'custom_logo' in openshift_components"
-  tags:
-  - custom_logo
+        - custom_logo
 
 - name: custom_login
-  include_tasks:
+  when: "'custom_login' in openshift_components"
+  tags:
+    - custom_login
+  ansible.builtin.include_tasks:
     file: custom_login.yml
     apply:
       tags:
-      - custom_login
-  when: "'custom_login' in openshift_components"
-  tags:
-  - custom_login
+        - custom_login
 
 - name: custom_console_url
-  include_tasks:
+  when: "'custom_console_url' in openshift_components"
+  tags:
+    - custom_console_url
+  ansible.builtin.include_tasks:
     file: custom_console_url.yml
     apply:
       tags:
-      - custom_console_url
-  when: "'custom_console_url' in openshift_components"
-  tags:
-  - custom_console_url
+        - custom_console_url
 
 - name: routercerts
-  include_tasks:
+  when: "'routercerts' in openshift_components"
+  tags:
+    - routercerts
+  ansible.builtin.include_tasks:
     file: routercerts.yml
     apply:
       tags:
-      - routercerts
-  when: "'routercerts' in openshift_components"
-  tags:
-  - routercerts
+        - routercerts
 
 - name: apiserver_certs
-  include_tasks:
+  when: "'apiserver_certs' in openshift_components"
+  tags:
+    - apiserver_certs
+  ansible.builtin.include_tasks:
     file: apiserver_certs.yml
     apply:
       tags:
-      - apiserver_certs
-  when: "'apiserver_certs' in openshift_components"
-  tags:
-  - apiserver_certs
+        - apiserver_certs
 
 - name: etcd_encryption
-  include_tasks:
+  when: "'etcd_encryption' in openshift_components"
+  tags:
+    - etcd_encryption
+  ansible.builtin.include_tasks:
     file: etcd_encryption.yml
     apply:
       tags:
-      - etcd_encryption
-  when: "'etcd_encryption' in openshift_components"
-  tags:
-  - etcd_encryption
+        - etcd_encryption
 
 - name: kubeconfig_rootca
-  include_tasks:
+  when: "'kubeconfig_rootca' in openshift_components"
+  tags:
+    - kubeconfig_rootca
+  ansible.builtin.include_tasks:
     file: kubeconfig_rootca.yml
     apply:
       tags:
-      - kubeconfig_rootca
-  when: "'kubeconfig_rootca' in openshift_components"
-  tags:
-  - kubeconfig_rootca
+        - kubeconfig_rootca

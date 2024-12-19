@@ -1,88 +1,87 @@
 ---
 - name: Check if /boot is a separate partition
-  command: mountpoint -q /boot
   register: boot_mountpoint
   failed_when: false
   changed_when: false
+  ansible.builtin.command: mountpoint -q /boot
 
 - name: Check for EFI
-  stat:
-    path: /sys/firmware/efi
   register: efi_enabled
+  ansible.builtin.stat:
+    path: /sys/firmware/efi
 
 - name: Get grub2 symlink
-  stat:
-    path: "/etc/grub2{% if efi_enabled.stat.exists %}-efi{% endif %}.cfg"
   register: grub2_cfg_symlink
+  ansible.builtin.stat:
+    path: /etc/grub2{% if efi_enabled.stat.exists %}-efi{% endif %}.cfg
 
 - name: debug
-  debug:
+  ansible.builtin.debug:
     var: grub2_cfg_symlink
 
-
 - name: set grub2.cfgpath
-  set_fact:
+  ansible.builtin.set_fact:
     grub2_cfg_path: "{{ grub2_cfg_symlink.stat.lnk_source | default('/boot/grub2/grub.cfg') }}"
 
 - name: Set coreos_boot_path variable
-  set_fact:
+  ansible.builtin.set_fact:
     coreos_boot_path: "{{ '/' if boot_mountpoint.rc == 0 else '/boot' }}"
 
 - name: Find grub root disk
-  shell: grep 'set root=' /etc/grub2.cfg | cut -d'=' -f2 | head -n1
   register: boot_disk
   changed_when: false
   failed_when: false
+  ansible.builtin.shell: grep 'set root=' /etc/grub2.cfg | cut -d'=' -f2 | head -n1
 
 - name: set coreos_root_disk
-  set_fact:
+  ansible.builtin.set_fact:
     coreos_root_disk: "{{ boot_disk.stdout }}"
 
 - name: Debug found values
-  debug:
+  ansible.builtin.debug:
     verbosity: 1
     msg: |
       coreos_boot_path: {{ coreos_boot_path}}
       coreos_root_disk: {{ coreos_root_disk }}
 
 - name: Download installer kernel
-  get_url:
-    url: "http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ coreos_urls.kernel.url | basename }}"
-    dest: "/boot/{{ coreos_urls.kernel.url | basename }}"
+  ansible.builtin.get_url:
+    url: http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ coreos_urls.kernel.url | basename }}
+    dest: /boot/{{ coreos_urls.kernel.url | basename }}
 
 - name: Download installer initramfs
-  get_url:
-    url: "http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ coreos_urls.initramfs.url | basename }}"
-    dest: "/boot/{{ coreos_urls.initramfs.url | basename }}"
   when:
-  - install_version is version('4.10', '<')
+    - install_version is version('4.10', '<')
+  ansible.builtin.get_url:
+    url: http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ coreos_urls.initramfs.url | basename }}
+    dest: /boot/{{ coreos_urls.initramfs.url | basename }}
 
 - name: Download installer initramfs
-  get_url:
-    url: "http://{{ bastion_external_hostname | default(bastion_host) }}/{{ inventory_hostname }}.initramfs"
-    dest: "/boot/{{ coreos_urls.initramfs.url | basename }}"
   when:
-  - install_version is version('4.10', '>=')
+    - install_version is version('4.10', '>=')
+  ansible.builtin.get_url:
+    url: http://{{ bastion_external_hostname | default(bastion_host) }}/{{ inventory_hostname }}.initramfs
+    dest: /boot/{{ coreos_urls.initramfs.url | basename }}
 
 - name: Create custom grub entry
-  template:
+  ansible.builtin.template:
     src: 40_custom.j2
-    mode: 0755
+    mode: 493
     dest: /etc/grub.d/40_custom
 
 - name: Set new entry to default
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/default/grub
-    regexp: '^GRUB_DEFAULT='
+    regexp: ^GRUB_DEFAULT=
     line: GRUB_DEFAULT='Install CoreOS'
     create: true
 
 - name: Update grub config
-  command: "grub2-mkconfig -o {{ grub2_cfg_path }}"
+  ansible.builtin.command: grub2-mkconfig -o {{ grub2_cfg_path }}
 
 - name: Reboot into installer
-  shell: "sleep 5 && reboot"
   async: 1
   poll: 0
   tags:
-  - reboot
+    - reboot
+  ansible.builtin.shell: sleep 5 && reboot

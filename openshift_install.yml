@@ -1,13 +1,13 @@
 ---
 - name: Install OpenShift 4.x
   hosts:
-  - bootstrap
-  - masters
-  - infra
-  - workers
-  - storage
+    - bootstrap
+    - masters
+    - infra
+    - workers
+    - storage
   gather_facts: false
   become: true
   serial: 20
   roles:
-  - openshift_install
+    - openshift_install

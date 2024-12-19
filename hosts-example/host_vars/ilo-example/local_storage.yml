@@ -1,5 +1,6 @@
+---
 local_storage:
-- device: /dev/sdb
-  storageclass: logging
-- device: /dev/sdc
-  storageclass: metrics
+  - device: /dev/sdb
+    storageclass: logging
+  - device: /dev/sdc
+    storageclass: metrics

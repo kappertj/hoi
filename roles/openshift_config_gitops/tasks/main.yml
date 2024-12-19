@@ -1,280 +1,280 @@
 ---
 - name: preflight
-  include_tasks:
+  tags:
+    - preflight
+  ansible.builtin.include_tasks:
     file: preflight.yml
     apply:
       tags:
-      - preflight
-  tags:
-  - preflight
+        - preflight
 
 - name: deploy_gitops
-  include_tasks:
+  when: "'deploy_gitops' in openshift_components"
+  tags:
+    - deploy_gitops
+  ansible.builtin.include_tasks:
     file: deploy_gitops.yml
     apply:
       tags:
-      - deploy_gitops
-  when: "'deploy_gitops' in openshift_components"
-  tags:
-  - deploy_gitops
+        - deploy_gitops
 
 - name: sealed_secrets
-  include_tasks:
+  when: "'sealed_secrets' in openshift_components"
+  tags:
+    - sealed_secrets
+  ansible.builtin.include_tasks:
     file: sealed_secrets.yml
     apply:
       tags:
-      - sealed_secrets
-  when: "'sealed_secrets' in openshift_components"
-  tags:
-  - sealed_secrets
+        - sealed_secrets
 
 - name: setup_git
-  include_tasks:
+  when: "'setup_git' in openshift_components"
+  tags:
+    - setup_git
+  ansible.builtin.include_tasks:
     file: setup_git.yml
     apply:
       tags:
-      - setup_git
-  when: "'setup_git' in openshift_components"
-  tags:
-  - setup_git
+        - setup_git
 
 - name: create_applicationset
-  include_tasks:
+  when: "'create_applicationset' in openshift_components"
+  tags:
+    - create_applicationset
+  ansible.builtin.include_tasks:
     file: create_applicationset.yml
     apply:
       tags:
-      - create_applicationset
-  when: "'create_applicationset' in openshift_components"
-  tags:
-  - create_applicationset
+        - create_applicationset
 
 - name: apiserver
-  include_tasks:
+  when: "'apiserver' in openshift_components"
+  tags:
+    - apiserver
+  ansible.builtin.include_tasks:
     file: apiserver.yml
     apply:
       tags:
-      - apiserver
-  when: "'apiserver' in openshift_components"
-  tags:
-  - apiserver
+        - apiserver
 
 - name: ingress
-  include_tasks:
+  when: "'ingress' in openshift_components"
+  tags:
+    - ingress
+  ansible.builtin.include_tasks:
     file: ingress.yml
     apply:
       tags:
-      - ingress
-  when: "'ingress' in openshift_components"
-  tags:
-  - ingress
+        - ingress
 
 - name: network-policies
-  include_tasks:
+  when: "'network-policies' in openshift_components"
+  tags:
+    - network-policies
+  ansible.builtin.include_tasks:
     file: network-policies.yml
     apply:
       tags:
-      - network-policies
-  when: "'network-policies' in openshift_components"
-  tags:
-  - network-policies
+        - network-policies
 
 - name: oauth
-  include_tasks:
+  when: "'oauth' in openshift_components"
+  tags:
+    - oauth
+  ansible.builtin.include_tasks:
     file: oauth.yml
     apply:
       tags:
-      - oauth
-  when: "'oauth' in openshift_components"
-  tags:
-  - oauth
+        - oauth
 
 - name: machineconfigs
-  include_tasks:
+  when: "'machineconfigs' in openshift_components"
+  tags:
+    - machineconfigs
+  ansible.builtin.include_tasks:
     file: machineconfigs.yml
     apply:
       tags:
-      - machineconfigs
-  when: "'machineconfigs' in openshift_components"
-  tags:
-  - machineconfigs
+        - machineconfigs
 
 - name: groupsync
-  include_tasks:
+  when: "'groupsync' in openshift_components"
+  tags:
+    - groupsync
+  ansible.builtin.include_tasks:
     file: groupsync.yml
     apply:
       tags:
-      - groupsync
-  when: "'groupsync' in openshift_components"
-  tags:
-  - groupsync
+        - groupsync
 
 - name: local_storage
-  include_tasks:
+  when: "'local_storage' in openshift_components"
+  tags:
+    - local_storage
+  ansible.builtin.include_tasks:
     file: local_storage.yml
     apply:
       tags:
-      - local_storage
-  when: "'local_storage' in openshift_components"
-  tags:
-  - local_storage
+        - local_storage
 
 - name: odf_storage
-  include_tasks:
+  when: "'odf_storage' in openshift_components"
+  tags:
+    - odf_storage
+  ansible.builtin.include_tasks:
     file: odf_storage.yml
     apply:
       tags:
-      - odf_storage
-  when: "'odf_storage' in openshift_components"
-  tags:
-  - odf_storage
+        - odf_storage
 
 - name: console
-  include_tasks:
+  when: "'console' in openshift_components"
+  tags:
+    - console
+  ansible.builtin.include_tasks:
     file: console.yml
     apply:
       tags:
-      - console
-  when: "'console' in openshift_components"
-  tags:
-  - console
+        - console
 
 - name: cicd-operators
-  include_tasks:
+  when: "'cicd-operators' in openshift_components"
+  tags:
+    - cicd-operators
+  ansible.builtin.include_tasks:
     file: cicd-operators.yml
     apply:
       tags:
-      - cicd-operators
-  when: "'cicd-operators' in openshift_components"
-  tags:
-  - cicd-operators
+        - cicd-operators
 
 - name: registry
-  include_tasks:
+  when: "'registry' in openshift_components"
+  tags:
+    - registry
+  ansible.builtin.include_tasks:
     file: registry.yml
     apply:
       tags:
-      - registry
-  when: "'registry' in openshift_components"
-  tags:
-  - registry
+        - registry
 
 - name: allowedregistries
-  include_tasks:
+  when: "'allowedregistries' in openshift_components"
+  tags:
+    - allowedregistries
+  ansible.builtin.include_tasks:
     file: allowedregistries.yml
     apply:
       tags:
-      - allowedregistries
-  when: "'allowedregistries' in openshift_components"
-  tags:
-  - allowedregistries
+        - allowedregistries
 
 - name: monitoring
-  include_tasks:
+  when: "'monitoring' in openshift_components"
+  tags:
+    - monitoring
+  ansible.builtin.include_tasks:
     file: monitoring.yml
     apply:
       tags:
-      - monitoring
-  when: "'monitoring' in openshift_components"
-  tags:
-  - monitoring
+        - monitoring
 
 - name: nfs-subdir-provisioner
-  include_tasks:
+  when: "'nfs-subdir-provisioner' in openshift_components"
+  tags:
+    - nfs-subdir-provisioner
+  ansible.builtin.include_tasks:
     file: nfs-subdir-provisioner.yml
     apply:
       tags:
-      - nfs-subdir-provisioner
-  when: "'nfs-subdir-provisioner' in openshift_components"
-  tags:
-  - nfs-subdir-provisioner
+        - nfs-subdir-provisioner
 
 - name: logging
-  include_tasks:
+  when: "'logging' in openshift_components"
+  tags:
+    - logging
+  ansible.builtin.include_tasks:
     file: logging.yml
     apply:
       tags:
-      - logging
-  when: "'logging' in openshift_components"
-  tags:
-  - logging
+        - logging
 
 - name: trident
-  include_tasks:
+  when: "'trident' in openshift_components"
+  tags:
+    - trident
+  ansible.builtin.include_tasks:
     file: trident.yml
     apply:
       tags:
-      - trident
-  when: "'trident' in openshift_components"
-  tags:
-  - trident
+        - trident
 
 - name: servicemesh
-  include_tasks:
+  when: "'servicemesh' in openshift_components"
+  tags:
+    - servicemesh
+  ansible.builtin.include_tasks:
     file: servicemesh.yml
     apply:
       tags:
-      - servicemesh
-  when: "'servicemesh' in openshift_components"
-  tags:
-  - servicemesh
+        - servicemesh
 
 - name: metallb
-  include_tasks:
+  when: "'metallb' in openshift_components"
+  tags:
+    - metallb
+  ansible.builtin.include_tasks:
     file: metallb.yml
     apply:
       tags:
-      - metallb
-  when: "'metallb' in openshift_components"
-  tags:
-  - metallb
+        - metallb
 
 - name: nodemaintenanceoperator
-  include_tasks:
+  when: "'nodemaintenanceoperator' in openshift_components"
+  tags:
+    - nodemaintenanceoperator
+  ansible.builtin.include_tasks:
     file: nodemaintenanceoperator.yml
     apply:
       tags:
-      - nodemaintenanceoperator
-  when: "'nodemaintenanceoperator' in openshift_components"
-  tags:
-  - nodemaintenanceoperator
+        - nodemaintenanceoperator
 
 - name: compliance_operator
-  include_tasks:
+  when: "'compliance_operator' in openshift_components"
+  tags:
+    - compliance_operator
+  ansible.builtin.include_tasks:
     file: compliance_operator.yml
     apply:
       tags:
-      - compliance_operator
-  when: "'compliance_operator' in openshift_components"
-  tags:
-  - compliance_operator
+        - compliance_operator
 
 - name: cis_compliance
-  include_tasks:
+  when: "'cis_compliance' in openshift_components"
+  tags:
+    - cis_compliance
+  ansible.builtin.include_tasks:
     file: cis_compliance.yml
     apply:
       tags:
-      - cis_compliance
-  when: "'cis_compliance' in openshift_components"
-  tags:
-  - cis_compliance
+        - cis_compliance
 
 - name: proxy
-  include_tasks:
+  when: "'proxy' in openshift_components"
+  tags:
+    - proxy
+  ansible.builtin.include_tasks:
     file: proxy.yml
     apply:
       tags:
-      - proxy
-  when: "'proxy' in openshift_components"
-  tags:
-  - proxy
+        - proxy
 
 - name: Update system:admin kubeconfig trusted CA
-  include_tasks:
+  when:
+    - custom_ca_file is defined
+  tags:
+    - kubeconfig_rootca
+  ansible.builtin.include_tasks:
     file: kubeconfig_rootca.yml
     apply:
       tags:
-      - kubeconfig_rootca
-  when:
-  - custom_ca_file is defined
-  tags:
-  - kubeconfig_rootca
+        - kubeconfig_rootca

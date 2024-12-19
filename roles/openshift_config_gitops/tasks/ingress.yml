@@ -1,31 +1,31 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: ingress
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Slurp certs and create router TLS secret
-  include_tasks: routercerts_slurp_and_create.yml
   loop: "{{ openshift_ingress_controllers }}"
   loop_control:
     loop_var: router
     label: "{{ router.name }}"
   when:
-  - (router.certfile is defined) or (router.cert_content is defined)
-  - (router.keyfile is defined) or (router.key_content is defined)
+    - (router.certfile is defined) or (router.cert_content is defined)
+    - (router.keyfile is defined) or (router.key_content is defined)
+  ansible.builtin.include_tasks: routercerts_slurp_and_create.yml
 
 - name: Create IngressController object
-  template:
-    src: ingress/ingresscontroller.yml.j2
-    dest: "{{ openshift_gitops_dir }}/ingress/assets/ingresscontroller-{{ router.name }}.yaml"
   loop: "{{ openshift_ingress_controllers }}"
   loop_control:
     loop_var: router
     label: "{{ router.name }}"
+  ansible.builtin.template:
+    src: ingress/ingresscontroller.yml.j2
+    dest: "{{ openshift_gitops_dir }}/ingress/assets/ingresscontroller-{{ router.name }}.yaml"
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: ingress
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

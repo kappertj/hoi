@@ -1,9 +1,9 @@
 ---
 - name: Patch the Console Operator to use a custom URL
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'custom_console_url/custom_console_url.yml.j2') | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
+      - strategic-merge
+      - merge

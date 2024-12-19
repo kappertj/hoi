@@ -1,11 +1,12 @@
+---
 - name: Configure Logging Using Loki
-  include_tasks:
-    file: logging-loki.yml
   when:
-  - logging_type | default('elastic') == 'loki'
+    - logging_type | default('elastic') == 'loki'
+  ansible.builtin.include_tasks:
+    file: logging-loki.yml
 
 - name: Configure Logging Using Loki
-  include_tasks:
-    file: logging-elastic.yml
   when:
-  - logging_type | default('elastic') == 'elastic'
+    - logging_type | default('elastic') == 'elastic'
+  ansible.builtin.include_tasks:
+    file: logging-elastic.yml

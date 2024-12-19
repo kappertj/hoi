@@ -10,35 +10,35 @@
   connection: local
   gather_facts: false
   tasks:
-  - name: Check if a single node is given
-    assert:
-      that:
-        - node is defined
-        - node is string
+    - name: Check if a single node is given
+      assert:
+        that:
+          - node is defined
+          - node is string
 
-  - name: Get node {{ node }} state
-    k8s_info:
-      kind: Node
-      name: "{{ node }}"
-    register: node_info
+    - name: Get node {{ node }} state
+      k8s_info:
+        kind: Node
+        name: "{{ node }}"
+      register: node_info
 
-  - name: Filter node object
-    set_fact:
-      node_info_status: "{{ node_info.resources | json_query(query) }}"
-    vars:
-      query: "[*].{ spec: spec, conditions: status.conditions }"
+    - name: Filter node object
+      set_fact:
+        node_info_status: "{{ node_info.resources | json_query(query) }}"
+      vars:
+        query: "[*].{ spec: spec, conditions: status.conditions }"
 
-  - name: Block to uncordon a node
-    block:
-      - name: Uncordon node {{ node }}
-        shell: "oc adm uncordon {{ node }}"
-        register: node_set_uncordon
+    - name: Block to uncordon a node
+      block:
+        - name: Uncordon node {{ node }}
+          shell: oc adm uncordon {{ node }}
+          register: node_set_uncordon
 
-      - name: Uncordon stdout
-        debug:
-          msg: |
-            {{ node_set_uncordon.stderr_lines }}
-            {{ node_set_uncordon.stdout_lines }}
-    when:
-    - node_info_status[0].spec.unschedulable is defined
-    - node_info_status[0].spec.unschedulable
+        - name: Uncordon stdout
+          debug:
+            msg: |
+              {{ node_set_uncordon.stderr_lines }}
+              {{ node_set_uncordon.stdout_lines }}
+      when:
+        - node_info_status[0].spec.unschedulable is defined
+        - node_info_status[0].spec.unschedulable

@@ -1,3 +1,4 @@
+---
 # This is all without all the nice OBC work done by other people in the old
 # version,that's because upstream does not yet have proper objectBucketClaim
 # support, and refuse to use the internal s3.openhishift-storage.svc endpoint
@@ -9,38 +10,37 @@
 # everybody runs everything on AWS.
 #
 - name: Ensure apiserver directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: registry
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Create Storage PVC if defined
-  template:
+  when:
+    - registry_storage_claim_name is defined
+  ansible.builtin.template:
     src: registry/storage-pvc.yml.j2
     dest: "{{ openshift_gitops_dir }}/registry/assets/storage-pvc.yaml"
-  when:
-  - registry_storage_claim_name is defined
 
 - name: Create Storage patch
-  template:
+  when:
+    - registry_storage_claim_name is defined
+  ansible.builtin.template:
     src: registry/storage-patch.yml.j2
     dest: "{{ openshift_gitops_dir }}/registry/patches/storage-patch.yaml"
-  when:
-  - registry_storage_claim_name is defined
 
 - name: Create nodeSelector Patch
-  template:
+  ansible.builtin.template:
     src: registry/nodeselector-patch.yml.j2
     dest: "{{ openshift_gitops_dir }}/registry/patches/nodeselector-patch.yaml"
 
-
 - name: Create Replicas Patch
-  template:
+  ansible.builtin.template:
     src: registry/replicas-patch.yml.j2
     dest: "{{ openshift_gitops_dir }}/registry/patches/replicas-patch.yaml"
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: registry
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

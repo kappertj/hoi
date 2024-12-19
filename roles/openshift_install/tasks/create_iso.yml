@@ -1,97 +1,100 @@
+---
 - name: Ensure needed tools are installed
-  yum:
-    name:
-    - genisoimage
-    - syslinux
-    state: present
   delegate_to: "{{ bastion_host }}"
   run_once: true
+  ansible.builtin.yum:
+    name:
+      - genisoimage
+      - syslinux
+    state: present
 
 - name: Ensure download directories are present
-  file:
-    path: "{{ coreos_iso_path }}"
-    state: directory
   delegate_to: "{{ bastion_host }}"
   run_once: true
+  ansible.builtin.file:
+    path: "{{ coreos_iso_path }}"
+    state: directory
 
 - name: Set iso path
-  set_fact:
+  ansible.builtin.set_fact:
     coreos_baseiso_file: "{{ '/var/www/html/coreos/' + ( install_version ) + '/' + ( coreos_urls.image.url | basename ) }}"
 
 - name: Grab DVD info
-  set_fact:
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.set_fact:
     coreos_volid: "{{ lookup('pipe', 'isoinfo -d -i ' + coreos_baseiso_file + \" | awk '/Volume id/ { print $3 }'\") }}"
     coreos_volsetid: "{{ lookup('pipe', 'isoinfo -d -i ' + coreos_baseiso_file + \" | awk '/Volume set id/ { print $4 }'\") }}"
-  delegate_to: "{{ bastion_host }}"
 
 - block:
-  - name: Create tempdir for new iso
-    tempfile:
-      path: "{{ installer_tmpdir | default(omit) }}"
-      state: directory
-    register: isotempdir
-    delegate_to: "{{ bastion_host }}"
-    throttle: 1
+    - name: Create tempdir for new iso
+      register: isotempdir
+      delegate_to: "{{ bastion_host }}"
+      throttle: 1
+      ansible.builtin.tempfile:
+        path: "{{ installer_tmpdir | default(omit) }}"
+        state: directory
 
-  - name: Create tempdir for boot
-    tempfile:
-      path: "{{ installer_tmpdir | default(omit) }}"
-      state: directory
-    register: coreostempdir
-    delegate_to: "{{ bastion_host }}"
-    throttle: 1
+    - name: Create tempdir for boot
+      register: coreostempdir
+      delegate_to: "{{ bastion_host }}"
+      throttle: 1
+      ansible.builtin.tempfile:
+        path: "{{ installer_tmpdir | default(omit) }}"
+        state: directory
 
-  - name: mount coreos iso
-    mount:
-      src: "{{ coreos_baseiso_file }}"
-      path: "{{ coreostempdir.path }}"
-      state: mounted
-      opts: ro,loop
-      fstype: iso9660
-    delegate_to: "{{ bastion_host }}"
-    throttle: 1
+    - name: mount coreos iso
+      delegate_to: "{{ bastion_host }}"
+      throttle: 1
+      ansible.posix.mount:
+        src: "{{ coreos_baseiso_file }}"
+        path: "{{ coreostempdir.path }}"
+        state: mounted
+        opts: ro,loop
+        fstype: iso9660
 
-  - name: Copy boot iso contents
-    command: "rsync -Pav {{ coreostempdir.path }}/ {{ isotempdir.path }}"
-    delegate_to: "{{ bastion_host }}"
+    - name: Copy boot iso contents
+      delegate_to: "{{ bastion_host }}"
+      ansible.builtin.command: rsync -Pav {{ coreostempdir.path }}/ {{ isotempdir.path }}
 
-  - name: Add custom files
-    template:
-      src: "{{ item.template }}"
-      dest: "{{isotempdir.path }}/{{ item.dest }}"
-    loop:
-    - template: isolinux.cfg.j2
-      dest: isolinux/isolinux.cfg
-    - template: grub.cfg.j2
-      dest: EFI/redhat/grub.cfg
-    delegate_to: "{{ bastion_host }}"
+    - name: Add custom files
+      loop:
+        - template: isolinux.cfg.j2
+          dest: isolinux/isolinux.cfg
+        - template: grub.cfg.j2
+          dest: EFI/redhat/grub.cfg
+      delegate_to: "{{ bastion_host }}"
+      ansible.builtin.template:
+        src: "{{ item.template }}"
+        dest: "{{isotempdir.path }}/{{ item.dest }}"
 
-  - name: create iso
-    command: "mkisofs -o {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso -b isolinux/isolinux.bin -J -R -l -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e images/efiboot.img -no-emul-boot -graft-points -V \"{{ coreos_volid }}\" -volset \"{{ coreos_volsetid }}\" ."
-    args:
-      chdir: "{{ isotempdir.path }}"
-    delegate_to: "{{ bastion_host }}"
+    - name: create iso
+      args:
+        chdir: "{{ isotempdir.path }}"
+      delegate_to: "{{ bastion_host }}"
+      ansible.builtin.command: mkisofs -o {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso -b isolinux/isolinux.bin -J -R -l -c isolinux/boot.cat -no-emul-boot
+        -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e images/efiboot.img -no-emul-boot -graft-points -V "{{ coreos_volid }}" -volset "{{ coreos_volsetid
+        }}" .
 
-  - name: create iso
-    command: "isohybrid --uefi {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso"
-    delegate_to: "{{ bastion_host }}"
+    - name: create iso
+      command: isohybrid --uefi {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso
+      delegate_to: "{{ bastion_host }}"
 
   always:
-  - name: umount boot iso
-    mount:
-      src: "{{ coreos_iso_path }}"
-      path: "{{ coreostempdir.path }}"
-      state: absent
-      opts: ro,loop
-      fstype: iso9660
-    delegate_to: "{{ bastion_host }}"
-    throttle: 1
+    - name: umount boot iso
+      delegate_to: "{{ bastion_host }}"
+      throttle: 1
+      ansible.posix.mount:
+        src: "{{ coreos_iso_path }}"
+        path: "{{ coreostempdir.path }}"
+        state: absent
+        opts: ro,loop
+        fstype: iso9660
 
-  - name: cleanup tempdir
-    file:
-      path: "{{ item }}"
-      state: absent
-    loop:
-    - "{{ isotempdir.path }}"
-    - "{{ coreostempdir.path }}"
-    delegate_to: "{{ bastion_host }}"
+    - name: cleanup tempdir
+      loop:
+        - "{{ isotempdir.path }}"
+        - "{{ coreostempdir.path }}"
+      delegate_to: "{{ bastion_host }}"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent

@@ -1,31 +1,31 @@
 ---
 - name: Wait for machineconfig CRDs to appear
-  k8s_info:
-    kubeconfig: "{{ openshift_kubeconfig }}"
-    api_version: machineconfiguration.openshift.io/v1
-    kind: MachineConfig
   register: machineconfigs
   until: ( machineconfigs.resources | default([]) | list | length ) > 0
   delegate_to: "{{ bastion_host }}"
   run_once: true
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: machineconfiguration.openshift.io/v1
+    kind: MachineConfig
 
 - name: Add infra machineconfigpool
-  k8s:
+  loop:
+    - machinepool-infra.yml.j2
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', item) | from_yaml }}"
-  loop:
-  - machinepool-infra.yml.j2
-  delegate_to: "{{ bastion_host }}"
-  run_once: true
 
 - name: Add storage machineconfigpool
-  k8s:
+  when:
+    - groups.storage is defined
+    - groups.storage | length > 0
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'machinepool-storage.yml.j2') | from_yaml }}"
-  when:
-  - groups.storage is defined
-  - groups.storage | length > 0
-  delegate_to: "{{ bastion_host }}"
-  run_once: true

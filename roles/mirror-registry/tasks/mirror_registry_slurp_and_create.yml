@@ -1,57 +1,56 @@
 ---
 - name: Slurp mirror-registry certfile to mirror-registry host
-  slurp:
-    src: "{{ mirror_registry_cert.certfile }}"
   delegate_to: "{{ bastion_host }}"
   register: mirror_registry_cert_content_slurp
   when:
-  - mirror_registry_cert.certfile is defined
-  - mirror_registry_cert.cert_content is not defined
+    - mirror_registry_cert.certfile is defined
+    - mirror_registry_cert.cert_content is not defined
+  ansible.builtin.slurp:
+    src: "{{ mirror_registry_cert.certfile }}"
 
 - name: Slurp mirror-registry keyfile to mirror-registry host
-  slurp:
-    src: "{{ mirror_registry_cert.keyfile }}"
   delegate_to: "{{ bastion_host }}"
   register: mirror_registry_key_content_slurp
   when:
-  - mirror_registry_cert.keyfile is defined
-  - mirror_registry_cert.key_content is not defined
+    - mirror_registry_cert.keyfile is defined
+    - mirror_registry_cert.key_content is not defined
+  ansible.builtin.slurp:
+    src: "{{ mirror_registry_cert.keyfile }}"
 
 - name: Set mirror-registry cert content
-  set_fact:
+  when:
+    - mirror_registry_cert.certfile is defined
+    - mirror_registry_cert.cert_content is not defined
+  ansible.builtin.set_fact:
     mirror_registry_cert_content: "{{ mirror_registry_cert_content_slurp.content | b64decode  }}"
-  when:
-  - mirror_registry_cert.certfile is defined
-  - mirror_registry_cert.cert_content is not defined
 
 - name: Set mirror-registry key content
-  set_fact:
-    mirror_registry_key_content: "{{ mirror_registry_key_content_slurp.content | b64decode  }}"
   when:
-  - mirror_registry_cert.keyfile is defined
-  - mirror_registry_cert.key_content is not defined
+    - mirror_registry_cert.keyfile is defined
+    - mirror_registry_cert.key_content is not defined
+  ansible.builtin.set_fact:
+    mirror_registry_key_content: "{{ mirror_registry_key_content_slurp.content | b64decode  }}"
 
 - name: Set mirror-registry cert content
-  set_fact:
-    mirror_registry_cert_content: "{{ mirror_registry_cert.cert_content }}"
   when:
-  - mirror_registry_cert.cert_content is defined
+    - mirror_registry_cert.cert_content is defined
+  ansible.builtin.set_fact:
+    mirror_registry_cert_content: "{{ mirror_registry_cert.cert_content }}"
 
 - name: Set mirror-registry key content
-  set_fact:
-    mirror_registry_key_content: "{{ mirror_registry_cert.cert_content }}"
   when:
-  - mirror_registry_cert.key_content is defined
-
+    - mirror_registry_cert.key_content is defined
+  ansible.builtin.set_fact:
+    mirror_registry_key_content: "{{ mirror_registry_cert.cert_content }}"
 
 - name: write certfile to mirror-registry host
-  copy:
+  delegate_to: "{{ mirror_registry.hostname }}"
+  ansible.builtin.copy:
     dest: "{{ mirror_registry.ssl }}/{{ mirror_registry.hostname }}.fullchain.pem"
     content: "{{ mirror_registry_cert_content }}"
-  delegate_to: "{{ mirror_registry.hostname }}"
 
 - name: write keyfile to mirror-registry host
-  copy:
+  delegate_to: "{{ mirror_registry.hostname }}"
+  ansible.builtin.copy:
     dest: "{{ mirror_registry.ssl }}/{{ mirror_registry.hostname }}.key"
     content: "{{ mirror_registry_key_content }}"
-  delegate_to: "{{ mirror_registry.hostname }}"

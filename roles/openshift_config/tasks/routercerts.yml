@@ -1,17 +1,17 @@
 ---
 - name: Wait for namespace to appear
-  k8s_info:
+  register: namespaces
+  until: ( namespaces.resources | length ) > 0
+  loop:
+    - openshift-ingress
+  kubernetes.core.k8s_info:
     kubeconfig: "{{ openshift_kubeconfig }}"
     api_version: v1
     kind: Namespace
     name: "{{ item }}"
-  register: namespaces
-  until: ( namespaces.resources | length ) > 0
-  loop:
-  - openshift-ingress
 
 - name: Slurp certs and create secret
-  include_tasks: routercerts_slurp_and_create.yml
   loop: "{{ routercerts_certificates }}"
   loop_control:
     loop_var: router
+  ansible.builtin.include_tasks: routercerts_slurp_and_create.yml

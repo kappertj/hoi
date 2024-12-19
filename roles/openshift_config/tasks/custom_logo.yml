@@ -1,11 +1,11 @@
+---
 - name: Configure Console Customizations
-  k8s:
-    kubeconfig: "{{ openshift_kubeconfig }}"
-    definition: "{{ lookup('template', 'custom_logo/' + item.template) | from_yaml }}"
   when: item.when | bool
   loop:
-  - template: custom_logo.yml.j2
-    when: "{{ custom_logo_file is defined }}"
-  - template: console.operator.openshift.io.yml.j2
-    when: "{{( custom_logo_file is defined ) or (custom_product_name is defined) }}"
-
+    - template: custom_logo.yml.j2
+      when: "{{ custom_logo_file is defined }}"
+    - template: console.operator.openshift.io.yml.j2
+      when: "{{( custom_logo_file is defined ) or (custom_product_name is defined) }}"
+  kubernetes.core.k8s:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    definition: "{{ lookup('template', 'custom_logo/' + item.template) | from_yaml }}"

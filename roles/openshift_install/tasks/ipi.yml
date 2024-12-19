@@ -1,14 +1,14 @@
 ---
 - name: Run openshift-install to create manifests
-  command: "{{ openshift_installer_binary }} --dir={{ openshift_ignition_dir }} create cluster"
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when:
-  - create_new_cluster is defined
+    - create_new_cluster is defined
+  ansible.builtin.command: "{{ openshift_installer_binary }} --dir={{ openshift_ignition_dir }} create cluster"
 
 - name: breaky breaky
-  assert:
-    that: false
-    fail_msg: Breaking on user request
   run_once: true
   when: break_early is defined
+  ansible.builtin.assert:
+    that: false
+    fail_msg: Breaking on user request

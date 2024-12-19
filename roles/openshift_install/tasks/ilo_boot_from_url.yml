@@ -1,7 +1,7 @@
 ---
 # use_proxy argument in uri module doesn't work. Known defect.
 - name: Honor no_proxy
-  set_fact:
+  ansible.builtin.set_fact:
     no_proxy: |
       {  
           {% if ilo_use_proxy | default(True) == True %}{% set ilo_add_proxy = '' %}{% else %}{% set ilo_add_proxy = ',' + ilo_address %}{% endif %}
@@ -29,184 +29,179 @@
       }
 
 - name: Abort if ILO server is unreachable
-  uri:
+  environment:
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
+  delegate_to: "{{ bastion_host }}"
+
+  # Changes to BIOS/UEFI can not be made when system is in POST procedure. 
+  ansible.builtin.uri:
     method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
     url_username: "{{ ilo_user }}"
     url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
     use_proxy: "{{ ilo_use_proxy | default(True) }}"
     status_code: 200
-  environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
-  delegate_to: "{{ bastion_host }}"
 
-# Changes to BIOS/UEFI can not be made when system is in POST procedure. 
 - name: Wait until system is not in POST procedure
-  uri:
-    method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
-    url_username: "{{ ilo_user }}"
-    url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
-    status_code: 200
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   register: restart_server
   delegate_to: "{{ bastion_host }}"
-  until:
-    restart_server.json.Oem.Hp.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost") 
-    or restart_server.json.Oem.Hpe.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost")
+  until: restart_server.json.Oem.Hp.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost") or restart_server.json.Oem.Hpe.PostState|default("Undefined")
+    in ("InPostDiscoveryComplete","FinishedPost")
   retries: 30
   delay: 10
+  ansible.builtin.uri:
+    method: GET
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
+    url_username: "{{ ilo_user }}"
+    url_password: "{{ ilo_password }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
+    status_code: 200
 
 - name: Set Boot ISO & IP address on management interface for onetime boot ilo 4
-  uri:
-    body: '{"{{ network_config.nicboot | selectattr("initial_boot_from_network", "==", True) | default("NicBoot1") }}": "NetworkBoot",
-            "Ipv4Address": "{{ network_config.address | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}",
-            "Ipv4Gateway": "{{ network_config.gateway | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}",
-            "Ipv4PrimaryDNS": "{{ network_config.dns["0"] | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}",
-            "Ipv4SecondaryDNS": "{{ network_config.dns["1"] | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}",
-            "Ipv4SubnetMask": "{{ network_config.netmask | selectattr("initial_boot_from_network", "==", True) | default("255.255.255.0")}}",
-            "UrlBootFile": "http://{{ bastion_external_hostname | default (bastion_host) }}/{{ inventory_hostname }}.iso"
-            }'
-    body_format: json
-    method: PATCH
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1/bios/Settings"
-    url_username: "{{ ilo_user }}"
-    url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   when:
     - ilo_version == 4
+  ansible.builtin.uri:
+    body: '{"{{ network_config.nicboot | selectattr("initial_boot_from_network", "==", True) | default("NicBoot1") }}": "NetworkBoot", "Ipv4Address": "{{ network_config.address
+      | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}", "Ipv4Gateway": "{{ network_config.gateway | selectattr("initial_boot_from_network",
+      "==", True) | default("0.0.0.0")}}", "Ipv4PrimaryDNS": "{{ network_config.dns["0"] | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}",
+      "Ipv4SecondaryDNS": "{{ network_config.dns["1"] | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}", "Ipv4SubnetMask": "{{ network_config.netmask
+      | selectattr("initial_boot_from_network", "==", True) | default("255.255.255.0")}}", "UrlBootFile": "http://{{ bastion_external_hostname | default (bastion_host)
+      }}/{{ inventory_hostname }}.iso" }'
+    body_format: json
+    method: PATCH
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1/bios/Settings
+    url_username: "{{ ilo_user }}"
+    url_password: "{{ ilo_password }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
 
 - name: Set Boot ISO & IP address on management interface for onetime boot  ilo 5
-  uri:
-    body: '{"{{ network_config.nicboot | selectattr("initial_boot_from_network", "==", True) | default("NicBoot1") }}": "NetworkBoot",
-            "Attributes": {"Ipv4Address": "{{ network_config.address | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}"},
-            "Attributes": {"Ipv4Gateway": "{{ network_config.gateway | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}"},
-            "Attributes": {"Ipv4PrimaryDNS": "{{ network_config.dns["0"] | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}"},
-            "Attributes": {"Ipv4SecondaryDNS": "{{ network_config.dns["1"] | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}"},
-            "Attributes": {"Ipv4SubnetMask": "{{ network_config.netmask | selectattr("initial_boot_from_network", "==", True) | default("255.255.255.0")}}"},
-            "Attributes": {"UrlBootFile": "http://{{ bastion_external_hostname | default (bastion_host) }}/{{ inventory_hostname }}.iso"}
-            }'
-    body_format: json
-    method: PATCH
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1/bios/Settings"
-    url_username: "{{ ilo_user }}"
-    url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   when:
     - ilo_version == 5
+  ansible.builtin.uri:
+    body: '{"{{ network_config.nicboot | selectattr("initial_boot_from_network", "==", True) | default("NicBoot1") }}": "NetworkBoot", "Attributes": {"Ipv4Address":
+      "{{ network_config.address | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}"}, "Attributes": {"Ipv4Gateway": "{{ network_config.gateway
+      | selectattr("initial_boot_from_network", "==", True) | default("0.0.0.0")}}"}, "Attributes": {"Ipv4PrimaryDNS": "{{ network_config.dns["0"] | selectattr("initial_boot_from_network",
+      "==", True) | default("0.0.0.0")}}"}, "Attributes": {"Ipv4SecondaryDNS": "{{ network_config.dns["1"] | selectattr("initial_boot_from_network", "==", True) |
+      default("0.0.0.0")}}"}, "Attributes": {"Ipv4SubnetMask": "{{ network_config.netmask | selectattr("initial_boot_from_network", "==", True) | default("255.255.255.0")}}"},
+      "Attributes": {"UrlBootFile": "http://{{ bastion_external_hostname | default (bastion_host) }}/{{ inventory_hostname }}.iso"} }'
+    body_format: json
+    method: PATCH
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1/bios/Settings
+    url_username: "{{ ilo_user }}"
+    url_password: "{{ ilo_password }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
 
 - name: Get current bios settings
-  uri:
-    method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1/bios"
-    url_username: "{{ ilo_user }}"
-    url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   register: current_bios
-
-- name: Get pending bios settings
-  uri:
+  ansible.builtin.uri:
     method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1/bios/Settings"
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1/bios
     url_username: "{{ ilo_user }}"
     url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
+
+- name: Get pending bios settings
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   register: pending_bios
+  ansible.builtin.uri:
+    method: GET
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1/bios/Settings
+    url_username: "{{ ilo_user }}"
+    url_password: "{{ ilo_password }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
 
 - name: Restart system ILO 4
-  redfish_command:
-    category: Systems
-    command: PowerForceRestart
-    baseuri: "{{ ilo_address }}"
-    username: "{{ ilo_user }}"
-    password: "{{ ilo_password }}"
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   when:
     - ilo_version == 4
-    - (current_bios.json['Ipv4Address'] != pending_bios.json['Ipv4Address']) or (current_bios.json['Ipv4Gateway'] != pending_bios.json['Ipv4Gateway']) or
-        (current_bios.json['Ipv4PrimaryDNS'] != pending_bios.json['Ipv4PrimaryDNS']) or (current_bios.json['Ipv4SubnetMask'] != pending_bios.json['Ipv4SubnetMask']) or
-        (current_bios.json['UrlBootFile'] != pending_bios.json['UrlBootFile'])
-
-- name: Restart system ILO 5
-  redfish_command:
+    - (current_bios.json['Ipv4Address'] != pending_bios.json['Ipv4Address']) or (current_bios.json['Ipv4Gateway'] != pending_bios.json['Ipv4Gateway']) or (current_bios.json['Ipv4PrimaryDNS']
+      != pending_bios.json['Ipv4PrimaryDNS']) or (current_bios.json['Ipv4SubnetMask'] != pending_bios.json['Ipv4SubnetMask']) or (current_bios.json['UrlBootFile']
+      != pending_bios.json['UrlBootFile'])
+  community.general.redfish_command:
     category: Systems
     command: PowerForceRestart
     baseuri: "{{ ilo_address }}"
     username: "{{ ilo_user }}"
     password: "{{ ilo_password }}"
+
+- name: Restart system ILO 5
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   when:
     - ilo_version == 5
-    - (current_bios.json.Attributes.Ipv4Address != pending_bios.json.Attributes.Ipv4Address) or (current_bios.json.Attributes.Ipv4Gateway != pending_bios.json.Attributes.Ipv4Gateway) or
-        (current_bios.json.Attributes.Ipv4PrimaryDNS != pending_bios.json.Attributes.Ipv4PrimaryDNS) or (current_bios.json.Attributes.Ipv4SubnetMask != pending_bios.json.Attributes.Ipv4SubnetMask) or
-        (current_bios.json.Attributes.UrlBootFile != pending_bios.json.Attributes.UrlBootFile)
+    - (current_bios.json.Attributes.Ipv4Address != pending_bios.json.Attributes.Ipv4Address) or (current_bios.json.Attributes.Ipv4Gateway != pending_bios.json.Attributes.Ipv4Gateway)
+      or (current_bios.json.Attributes.Ipv4PrimaryDNS != pending_bios.json.Attributes.Ipv4PrimaryDNS) or (current_bios.json.Attributes.Ipv4SubnetMask != pending_bios.json.Attributes.Ipv4SubnetMask)
+      or (current_bios.json.Attributes.UrlBootFile != pending_bios.json.Attributes.UrlBootFile)
+  community.general.redfish_command:
+    category: Systems
+    command: PowerForceRestart
+    baseuri: "{{ ilo_address }}"
+    username: "{{ ilo_user }}"
+    password: "{{ ilo_password }}"
 
-- name: Wait for reboot 
+- name: Wait for reboot
   uri:
     method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
     url_username: "{{ ilo_user }}"
     url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   register: restart_server
   delegate_to: "{{ bastion_host }}"
-  until:
-    restart_server.json.Oem.Hp.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost") 
-    or restart_server.json.Oem.Hpe.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost")
+  until: restart_server.json.Oem.Hp.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost") or restart_server.json.Oem.Hpe.PostState|default("Undefined")
+    in ("InPostDiscoveryComplete","FinishedPost")
   retries: 30
   delay: 10
 
 - name: Look for boot entry URLFILE
   uri:
     method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
     url_username: "{{ ilo_user }}"
     url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   register: Boot
 
@@ -219,7 +214,7 @@
     URLFile: "{{ Boot.json.Boot['UefiTargetBootSourceOverride@Redfish.AllowableValues'] | select('match','IPv4(0.0.0.0)*') | list | first | default('NOTVALID') }}"
   when:
     - ilo_version == 5
-  
+
 # During a CoreOS installation is URLFILE not in the list of supported method (replaced by RAMDisk.Emb.1.1)
 # A reboot fixes the list.
 - name: Reboot if URLFILE not found
@@ -230,137 +225,136 @@
     username: "{{ ilo_user }}"
     password: "{{ ilo_password }}"
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   when: URLFile == 'NOTVALID'
 
 - name: Wait for reboot
-  uri:
-    method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
-    url_username: "{{ ilo_user }}"
-    url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   register: restart_server
   delegate_to: "{{ bastion_host }}"
-  until:
-    restart_server.json.Oem.Hp.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost") 
-    or restart_server.json.Oem.Hpe.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost")
+  until: restart_server.json.Oem.Hp.PostState|default("Undefined") in ("InPostDiscoveryComplete","FinishedPost") or restart_server.json.Oem.Hpe.PostState|default("Undefined")
+    in ("InPostDiscoveryComplete","FinishedPost")
   retries: 30
   delay: 10
-
-- name: Look for boot entry URLFILE
-  uri:
+  ansible.builtin.uri:
     method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
     url_username: "{{ ilo_user }}"
     url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
+
+- name: Look for boot entry URLFILE
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   register: Boot
+  ansible.builtin.uri:
+    method: GET
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
+    url_username: "{{ ilo_user }}"
+    url_password: "{{ ilo_password }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
 
-- set_fact:
-    URLFile: "{{ Boot.json.Boot.UefiTargetBootSourceOverrideSupported | select('match','File.URL.*') | list | first | default('NOTVALID') }}"
-  when:
+- when:
     - ilo_version == 4
+  ansible.builtin.set_fact:
+    URLFile: "{{ Boot.json.Boot.UefiTargetBootSourceOverrideSupported | select('match','File.URL.*') | list | first | default('NOTVALID') }}"
 
-- set_fact:
-    URLFile: "{{ Boot.json.Boot['UefiTargetBootSourceOverride@Redfish.AllowableValues'] | select('match','IPv4(0.0.0.0)*') | list | first | default('NOTVALID') }}"
-  when:
+- when:
     - ilo_version == 5
+  ansible.builtin.set_fact:
+    URLFile: "{{ Boot.json.Boot['UefiTargetBootSourceOverride@Redfish.AllowableValues'] | select('match','IPv4(0.0.0.0)*') | list | first | default('NOTVALID') }}"
 
 - name: poweroff if poststate is INPOST
-  redfish_command:
+  environment:
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
+  delegate_to: "{{ bastion_host }}"
+  community.general.redfish_command:
     category: Systems
     command: PowerForceOff
     baseuri: "{{ ilo_address }}"
     username: "{{ ilo_user }}"
     password: "{{ ilo_password }}"
-  environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
-  delegate_to: "{{ bastion_host }}"
 
 - name: Wait for poweroff
-  uri:
-    method: GET
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
-    url_username: "{{ ilo_user }}"
-    url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-    return_content: yes
   environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
   register: off_server
   delegate_to: "{{ bastion_host }}"
-  until:
-    off_server.json.PowerState|default("Undefined") in ("Off")
+  until: off_server.json.PowerState|default("Undefined") in ("Off")
   retries: 30
   delay: 10
 
-# Due to a defect(?) RedFish in HP Proliant 360G9 requires UefiTargetBootSourceOverride to be set before UefiTarget. 
-# The Proliant throws an error when setting all attributes in a single patch command (like the redfish_command SetOneTimeBoot command does)
+  # Due to a defect(?) RedFish in HP Proliant 360G9 requires UefiTargetBootSourceOverride to be set before UefiTarget. 
+  # The Proliant throws an error when setting all attributes in a single patch command (like the redfish_command SetOneTimeBoot command does)
+  ansible.builtin.uri:
+    method: GET
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
+    url_username: "{{ ilo_user }}"
+    url_password: "{{ ilo_password }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
+
 - name: Set UefiTargetBootSourceOverride before running redfish module
-  uri:
+  environment:
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.uri:
     body: '{"Boot": {"UefiTargetBootSourceOverride": "{{ URLFile }}" } }'
     body_format: json
     method: PATCH
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
     url_username: "{{ ilo_user }}"
     url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-  environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
-  delegate_to: "{{ bastion_host }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
 
 - name: Set BootSourceOverrideTarget before running redfish module
-  uri:
+  environment:
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.uri:
     body: '{"Boot": { "BootSourceOverrideTarget": "UefiTarget", "BootSourceOverrideEnabled": "Once" } }'
     body_format: json
     method: PATCH
-    url: "https://{{ ilo_address }}/redfish/v1/Systems/1"
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
     url_username: "{{ ilo_user }}"
     url_password: "{{ ilo_password }}"
-    validate_certs: no
-    follow_redirects: 'yes'
-    force_basic_auth: yes
-  environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
-  delegate_to: "{{ bastion_host }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
 
 - name: Set one-time boot device to UefiTarget
-  redfish_command:
+  environment:
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
+  delegate_to: "{{ bastion_host }}"
+  community.general.redfish_command:
     category: Systems
     command: SetOneTimeBoot
-    bootdevice: "UefiTarget"
+    bootdevice: UefiTarget
     uefi_target: "{{ URLFile }}"
     baseuri: "{{ ilo_address }}"
     username: "{{ ilo_user }}"
     password: "{{ ilo_password }}"
-  environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
-  delegate_to: "{{ bastion_host }}"
 
 - name: PowerOn system
-  redfish_command:
+  environment:
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
+  delegate_to: "{{ bastion_host }}"
+  community.general.redfish_command:
     category: Systems
     command: PowerOn
     baseuri: "{{ ilo_address }}"
     username: "{{ ilo_user }}"
     password: "{{ ilo_password }}"
-  environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}" 
-  delegate_to: "{{ bastion_host }}"

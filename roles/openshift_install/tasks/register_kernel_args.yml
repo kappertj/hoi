@@ -1,25 +1,26 @@
 ---
 - name: Set URL facts
-  set_fact:
-    coreos_metal_image_url: "http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ install_version }}/{{ coreos_urls.image.url | basename }}"
-    openshift_installer_ignition_url: "http://{{ bastion_external_hostname | default (bastion_host) }}/{{ inventory_hostname }}.ign"
+  ansible.builtin.set_fact:
+    coreos_metal_image_url: http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ install_version }}/{{ coreos_urls.image.url | basename }}
+    openshift_installer_ignition_url: http://{{ bastion_external_hostname | default (bastion_host) }}/{{ inventory_hostname }}.ign
 
 - name: Set coreos_rootfs URL facts
-  set_fact:
-    coreos_rootfs_url: "http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ install_version }}/{{ coreos_urls.rootfs.url | default(omit) | basename }}"
+  ansible.builtin.set_fact:
+    coreos_rootfs_url: http://{{ bastion_external_hostname | default(bastion_host) }}/coreos/{{ install_version }}/{{ coreos_urls.rootfs.url | default(omit) | basename
+      }}
 
 - name: Set kernel installation args
-  set_fact:
+  when:
+    - install_version is version('4.10', '<')
+  ansible.builtin.set_fact:
     coreos_installation_args: "{{ lookup('template', 'coreos_installation_args.j2') | replace('\n', ' ') }}"
-  when:
-  - install_version is version('4.10', '<')
 
 - name: Set kernel installation args
-  set_fact:
-    coreos_installation_args: "{{ lookup('template', 'coreos_network_args.j2') | replace('\n', ' ') }}"
   when:
-  - install_version is version('4.10', '>=')
+    - install_version is version('4.10', '>=')
+  ansible.builtin.set_fact:
+    coreos_installation_args: "{{ lookup('template', 'coreos_network_args.j2') | replace('\n', ' ') }}"
 
 - name: Debug
-  debug:
+  ansible.builtin.debug:
     var: coreos_installation_args

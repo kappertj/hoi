@@ -1,21 +1,20 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: groupsync
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: slurp CA and create
-  include_tasks: groupsync_slurp_and_create_ca.yml
   loop: "{{ oauths }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-  - item.cafile is defined
-  - item.groupsync is defined
+    - item.cafile is defined
+    - item.groupsync is defined
+  ansible.builtin.include_tasks: groupsync_slurp_and_create_ca.yml
 
 - name: Configure oauth bind passwords sealed-secret
-  include_tasks: create_sealed_secret.yml
   vars:
     secret_template: "{{ lookup('template', 'oauth/oauths-bindpw.yml.j2') | from_yaml }}"
     apply_to_cluster: false
@@ -24,11 +23,11 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-  - item.type | default('LDAP') == 'LDAP'
-  - item.groupsync is defined
+    - item.type | default('LDAP') == 'LDAP'
+    - item.groupsync is defined
+  ansible.builtin.include_tasks: create_sealed_secret.yml
 
 - name: Configure LDAP bind passwords sealed-secret
-  include_tasks: create_sealed_secret.yml
   vars:
     secret_template: "{{ lookup('template', 'groupsync/ldap-bindpw.yml.j2') | from_yaml }}"
     apply_to_cluster: false
@@ -37,11 +36,11 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-  - item.type | default('LDAP') == 'LDAP'
-  - item.groupsync is defined
+    - item.type | default('LDAP') == 'LDAP'
+    - item.groupsync is defined
+  ansible.builtin.include_tasks: create_sealed_secret.yml
 
 - name: Configure OpenID bind passwords sealed-secret
-  include_tasks: create_sealed_secret.yml
   vars:
     secret_template: "{{ lookup('template', 'groupsync/openid-connect-secret.yml.j2') | from_yaml }}"
     apply_to_cluster: false
@@ -50,36 +49,37 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-  - item.type | default('LDAP') == 'OpenID'
-  - item.groupsync is defined
+    - item.type | default('LDAP') == 'OpenID'
+    - item.groupsync is defined
+  ansible.builtin.include_tasks: create_sealed_secret.yml
 
 - name: Configure GroupSync object
-  template:
-    src: groupsync/groupsync.yml.j2
-    dest: "{{ openshift_gitops_dir }}/groupsync/assets/groupsync-{{ item.name }}.yaml"
   loop: "{{ oauths }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-  - item.groupsync is defined
+    - item.groupsync is defined
+  ansible.builtin.template:
+    src: groupsync/groupsync.yml.j2
+    dest: "{{ openshift_gitops_dir }}/groupsync/assets/groupsync-{{ item.name }}.yaml"
 
 - name: Template nodeselector patches
-  template:
-    src: "groupsync/{{ item }}.yaml.j2"
-    dest: "{{ openshift_gitops_dir }}/groupsync/patches/{{ item }}.yaml"
   loop:
-  - groupsync-nodeselector-ns
-  - groupsync-nodeselector-sub
+    - groupsync-nodeselector-ns
+    - groupsync-nodeselector-sub
   when:
-  - groups['infra'] | default([]) | length > 0
+    - groups['infra'] | default([]) | length > 0
+  ansible.builtin.template:
+    src: groupsync/{{ item }}.yaml.j2
+    dest: "{{ openshift_gitops_dir }}/groupsync/patches/{{ item }}.yaml"
 
 - name: Create cluster-admin rolebinding for admin groups
-  template:
+  ansible.builtin.template:
     src: groupsync/cluster-admin-groups-rolebinding.yml.j2
     dest: "{{ openshift_gitops_dir }}/groupsync/assets/cluster-admin-groups-rolebinding.yaml"
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: groupsync
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

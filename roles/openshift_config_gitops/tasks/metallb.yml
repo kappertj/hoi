@@ -1,43 +1,43 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: metallb
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Create IPAddressPools
-  template:
+  loop: "{{ metallb.addresspools }}"
+  ansible.builtin.template:
     src: metallb/addresspool.yaml.j2
     dest: "{{ openshift_gitops_dir }}/metallb/assets/addresspool-{{ item.name }}.yaml"
-  loop: "{{ metallb.addresspools }}"
 
 - name: Create BGPPeers
-  template:
+  loop: "{{ metallb.peers }}"
+  ansible.builtin.template:
     src: metallb/bgppeer.yaml.j2
     dest: "{{ openshift_gitops_dir }}/metallb/assets/bgppeer-{{ item.name }}.yaml"
-  loop: "{{ metallb.peers }}"
 
 - name: Create BGPAdverstisements
-  template:
+  loop: "{{ metallb.bgpadvertisements | default([]) }}"
+  ansible.builtin.template:
     src: metallb/bgpadvertisement.yaml.j2
     dest: "{{ openshift_gitops_dir }}/metallb/assets/bgpadvertisement-{{ item.name }}.yaml"
-  loop: "{{ metallb.bgpadvertisements | default([]) }}"
 
 - name: Create L2Adverstisements
-  template:
+  loop: "{{ metallb.l2advertisements | default([]) }}"
+  ansible.builtin.template:
     src: metallb/l2advertisement.yaml.j2
     dest: "{{ openshift_gitops_dir }}/metallb/assets/l2advertisement-{{ item.name }}.yaml"
-  loop: "{{ metallb.l2advertisements | default([]) }}"
 
 - name: Template extra LoadBalancer Service for default Ingress
-  template:
+  when:
+    - metallb.add_default_ingress_service | default(false)
+  ansible.builtin.template:
     src: metallb/router-metallb-default.yaml.j2
     dest: "{{ openshift_gitops_dir }}/metallb/assets/router-metallb-default.yaml"
-  when:
-  - metallb.add_default_ingress_service | default(false)
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: metallb
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

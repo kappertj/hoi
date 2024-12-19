@@ -1,27 +1,26 @@
 ---
 - name: slurp CA and create
-  include_tasks: oauths_slurp_and_create_ca.yml
   loop: "{{ oauths }}"
+  ansible.builtin.include_tasks: oauths_slurp_and_create_ca.yml
 
 - name: Configure oauth bind passwords
-  k8s:
+  loop: "{{ oauths }}"
+  when: item.type == 'LDAP'
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'oauth/oauths-bindpw.yml.j2') | from_yaml }}"
-  loop: "{{ oauths }}"
-  when: item.type == 'LDAP'
 
 - name: Configure openid secrect
-  k8s:
+  loop: "{{ oauths }}"
+  when: item.type == 'OpenID'
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'oauth/openid-connect-secret.yml.j2') | from_yaml }}"
-  loop: "{{ oauths }}"
-  when: item.type == 'OpenID'
 
 - name: Configure Authentication
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'oauth/oauths.yml.j2') | from_yaml }}"
-

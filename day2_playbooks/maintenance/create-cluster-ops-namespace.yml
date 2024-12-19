@@ -9,16 +9,16 @@
   connection: local
   gather_facts: false
   tasks:
-  - name: Create a cluster operations namespace with specific requirements for maintenance activities
-    k8s:
-      state: present
-      definition:
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          annotations:
-            openshift.io/description: "Namespace for specific OpenShift Operations"
-            openshift.io/display-name: "cluster-ops"
-            openshift.io/node-selector: ""
-            scheduler.alpha.kubernetes.io/defaultTolerations: '[{"operator": "Exists"}]'
-          name: cluster-ops
+    - name: Create a cluster operations namespace with specific requirements for maintenance activities
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            annotations:
+              openshift.io/description: Namespace for specific OpenShift Operations
+              openshift.io/display-name: cluster-ops
+              openshift.io/node-selector: ""
+              scheduler.alpha.kubernetes.io/defaultTolerations: '[{"operator": "Exists"}]'
+            name: cluster-ops

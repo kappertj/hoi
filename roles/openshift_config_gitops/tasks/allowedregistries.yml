@@ -1,27 +1,28 @@
+---
 - name: Ensure allowedregistries Application directories exists
-  file:
+  loop:
+    - assets
+  ansible.builtin.file:
     path: "{{ openshift_gitops_dir}}/allowedregistries/{{ item }}"
     state: directory
-  loop:
-  - assets
 
 - name: Create asset files
-  template:
-    src: "allowedregistries/{{ item.file }}.j2"
-    dest: "{{ openshift_gitops_dir }}/allowedregistries/assets/{{ item.file }}"
   loop:
-  - file: allowedregistries.yaml
-  - file: external-registry-ca.yaml
-  - file: gitops-rolebinding.yaml
-  - file: sample-registries.yaml
+    - file: allowedregistries.yaml
+    - file: external-registry-ca.yaml
+    - file: gitops-rolebinding.yaml
+    - file: sample-registries.yaml
+  ansible.builtin.template:
+    src: allowedregistries/{{ item.file }}.j2
+    dest: "{{ openshift_gitops_dir }}/allowedregistries/assets/{{ item.file }}"
 
 - name: Find all generated files
-  find:
+  register: allowedregistries_asset_files
+  ansible.builtin.find:
     path: "{{ openshift_gitops_dir }}/allowedregistries/assets"
     file_type: file
-  register: allowedregistries_asset_files
 
 - name: Configure kustomization file
-  template:
+  ansible.builtin.template:
     src: allowedregistries/kustomization.yaml.j2
     dest: "{{ openshift_gitops_dir }}/allowedregistries/kustomization.yaml"

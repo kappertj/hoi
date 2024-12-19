@@ -1,22 +1,22 @@
 ---
 - name: Slurp API server cert
-  slurp:
-    src: "{{ apiserver_certificate.certfile }}"
   register: apiserver_certificate_cert
+  ansible.builtin.slurp:
+    src: "{{ apiserver_certificate.certfile }}"
 
 - name: Slurp API server key
-  slurp:
-    src: "{{ apiserver_certificate.keyfile }}"
   register: apiserver_certificate_key
   when:
-  - not apiserver_certificate.keyfile_is_vaultencrypted | default(false)
+    - not apiserver_certificate.keyfile_is_vaultencrypted | default(false)
+  ansible.builtin.slurp:
+    src: "{{ apiserver_certificate.keyfile }}"
 
 - name: Update apiserver certs
-  k8s:
+  loop:
+    - apiserver-certs.yml.j2
+    - apiserver.yml.j2
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     validate_certs: false
     state: present
     definition: "{{ lookup('template', 'apiserver_certs/' + item) | from_yaml }}"
-  loop:
-  - apiserver-certs.yml.j2
-  - apiserver.yml.j2

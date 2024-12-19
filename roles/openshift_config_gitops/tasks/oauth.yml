@@ -1,18 +1,17 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: oauth
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: slurp CA and create
-  include_tasks: oauths_slurp_and_create_ca.yml
   loop: "{{ oauths }}"
   when:
-  - item.cafile is defined
+    - item.cafile is defined
+  ansible.builtin.include_tasks: oauths_slurp_and_create_ca.yml
 
 - name: Configure oauth bind passwords sealed-secret
-  include_tasks: create_sealed_secret.yml
   vars:
     secret_template: "{{ lookup('template', 'oauth/oauths-bindpw.yml.j2') | from_yaml }}"
     apply_to_cluster: false
@@ -21,10 +20,10 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-  - item.type | default('LDAP') == 'LDAP'
+    - item.type | default('LDAP') == 'LDAP'
+  ansible.builtin.include_tasks: create_sealed_secret.yml
 
 - name: Configure oauth bind passwords sealed-secret
-  include_tasks: create_sealed_secret.yml
   vars:
     secret_template: "{{ lookup('template', 'oauth/openid-connect-secret.yml.j2') | from_yaml }}"
     apply_to_cluster: false
@@ -33,59 +32,61 @@
   loop_control:
     label: "{{ item.name }}"
   when:
-  - item.type | default('LDAP') == 'OpenID'
+    - item.type | default('LDAP') == 'OpenID'
+  ansible.builtin.include_tasks: create_sealed_secret.yml
 
 - name: Configure Authentication object
-  template:
+  ansible.builtin.template:
     src: oauth/oauths.yml.j2
     dest: "{{ openshift_gitops_dir }}/oauth/assets/oauth-cluster.yaml"
 
 - name: Login Branding
   block:
-  - name: Ensure oauth Application directory exists
-    file:
-      path: "{{ openshift_gitops_dir}}/oauth/custom-login-templates"
-      state: directory
-  - name: Template Custom Login Pages
-    template:
-      src: oauth/{{ item }}.j2
-      dest: "{{ openshift_gitops_dir}}/oauth/custom-login-templates/{{ item }}"
-    loop:
-    - login.html
-    - errors.html
-    - providers.html
+    - name: Ensure oauth Application directory exists
+      ansible.builtin.file:
+        path: "{{ openshift_gitops_dir}}/oauth/custom-login-templates"
+        state: directory
+
+    - name: Template Custom Login Pages
+      template:
+        src: oauth/{{ item }}.j2
+        dest: "{{ openshift_gitops_dir}}/oauth/custom-login-templates/{{ item }}"
+      loop:
+        - login.html
+        - errors.html
+        - providers.html
   when:
-  - "'branding' in openshift_components"
+    - "'branding' in openshift_components"
 
 - name: create SecretMapGenerator for branding files
-  set_fact:
-    oauth_extra_content:
-    - secretGenerator:
-      - name: custom-login-templates
-        namespace: openshift-config
-        type: Opaque
-        options:
-          disableNameSuffixHash: true
-          annotations:
-            argocd.argoproj.io/sync-options: Replace=true
-            argocd.argoproj.io/compare-options: IgnoreExtraneous
-        files:
-        - custom-login-templates/login.html
-        - custom-login-templates/errors.html
-        - custom-login-templates/providers.html
   when:
-  - "'branding' in openshift_components"
+    - "'branding' in openshift_components"
+  ansible.builtin.set_fact:
+    oauth_extra_content:
+      - secretGenerator:
+          - name: custom-login-templates
+            namespace: openshift-config
+            type: Opaque
+            options:
+              disableNameSuffixHash: true
+              annotations:
+                argocd.argoproj.io/sync-options: Replace=true
+                argocd.argoproj.io/compare-options: IgnoreExtraneous
+            files:
+              - custom-login-templates/login.html
+              - custom-login-templates/errors.html
+              - custom-login-templates/providers.html
 
 - name: Configure self-provisioners
-  template:
+  when:
+    - self_provisioners.remove_default or ( self_provisioners.users | length > 0 ) or ( self_provisioners.groups | length > 0 )
+  ansible.builtin.template:
     src: oauth/self-provisioners.yml.j2
     dest: "{{ openshift_gitops_dir }}/oauth/assets/self-provisioners.yaml"
-  when:
-  - self_provisioners.remove_default or ( self_provisioners.users | length > 0 ) or ( self_provisioners.groups | length > 0 )
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: oauth
-    gitops_component_extra_content: "{{ oauth_extra_content | default([]) }}" 
+    gitops_component_extra_content: "{{ oauth_extra_content | default([]) }}"
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

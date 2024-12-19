@@ -1,30 +1,30 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: local-storage
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Find all defined host storage
-  set_fact:
+  ansible.builtin.set_fact:
     local_storage_all_nodes: "{{ groups['masters'] + groups['infra'] + ( groups['storage']| default([]) ) + groups['workers'] | unique }}"
 
 - name: Create LocalVolumes
-  template:
-    src: local_storage/local-storage-operator-local-volume.yml.j2
-    dest: "{{ openshift_gitops_dir }}/local-storage/assets/local-volumes-{{ item }}.yaml"
   loop: "{{ local_storage_all_nodes }}"
   when: hostvars[item]['local_storage'] is defined
+  ansible.builtin.template:
+    src: local_storage/local-storage-operator-local-volume.yml.j2
+    dest: "{{ openshift_gitops_dir }}/local-storage/assets/local-volumes-{{ item }}.yaml"
 
 - name: Create nodeselector patch
-  template:
+  when:
+    - groups['infra'] | default([])| length > 0
+  ansible.builtin.template:
     src: local_storage/nodeselector.yaml.j2
     dest: "{{ openshift_gitops_dir }}/local-storage/patches/nodeselector.yaml"
-  when:
-  - groups['infra'] | default([])| length > 0
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: local-storage
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

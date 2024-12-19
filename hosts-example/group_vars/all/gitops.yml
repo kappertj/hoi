@@ -1,4 +1,5 @@
+---
 openshift_gitops_admin_groups:
-- cluster-admins
-openshift_gitops_default_role: ''
+  - cluster-admins
+openshift_gitops_default_role: ""
 #gitops_operator_channel: stable

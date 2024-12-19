@@ -12,55 +12,55 @@
   vars:
     ansible_python_interpreter: auto
   tasks:
-  - name: Check if a single node is given
-    assert:
-      that:
-        - node is defined
-        - node is string
+    - name: Check if a single node is given
+      assert:
+        that:
+          - node is defined
+          - node is string
 
-  - name: Get node {{ node }} state
-    k8s_info:
-      kind: Node
-      name: "{{ node }}"
-    register: node_info
+    - name: Get node {{ node }} state
+      k8s_info:
+        kind: Node
+        name: "{{ node }}"
+      register: node_info
 
-  - name: Filter node object
-    set_fact:
-      node_info_status: "{{ node_info.resources | json_query(query) }}"
-    vars:
-      query: "[*].{ spec: spec, conditions: status.conditions }"
+    - name: Filter node object
+      set_fact:
+        node_info_status: "{{ node_info.resources | json_query(query) }}"
+      vars:
+        query: "[*].{ spec: spec, conditions: status.conditions }"
 
-  - name: Block to cordon a node
-    block:
-      - name: Cordon node {{ node }}
-        shell: "oc adm cordon {{ node }}"
-        register: node_set_cordon
+    - name: Block to cordon a node
+      block:
+        - name: Cordon node {{ node }}
+          shell: oc adm cordon {{ node }}
+          register: node_set_cordon
 
-      - name: Cordon stdout
-        debug:
-          msg: |
-            {{ node_set_cordon.stderr_lines }} 
-            {{ node_set_cordon.stdout_lines }} 
-    when:
-    - not node_info_status[0].spec.unschedulable is defined
+        - name: Cordon stdout
+          debug:
+            msg: |
+              {{ node_set_cordon.stderr_lines }} 
+              {{ node_set_cordon.stdout_lines }} 
+      when:
+        - not node_info_status[0].spec.unschedulable is defined
 
-  - name: Block to drain a node
-    block:
-      - name: Drain node {{ node }} 
-        command: >
-         oc adm drain {{ node }}
-         --force=true
-         --grace-period=30
-         --timeout=90s
-         --ignore-daemonsets=true
-         --delete-emptydir-data=true
-        register: node_set_drain
+    - name: Block to drain a node
+      block:
+        - name: Drain node {{ node }}
+          command: >
+            oc adm drain {{ node }}
+            --force=true
+            --grace-period=30
+            --timeout=90s
+            --ignore-daemonsets=true
+            --delete-emptydir-data=true
+          register: node_set_drain
 
-      - name: Drain stdout
-        debug:
-          msg: |
-            {{ node_set_drain.stderr_lines }}
-            {{ node_set_drain.stdout_lines }}
-    when:
-    - node_set_cordon is defined
-    - node_set_cordon.changed
+        - name: Drain stdout
+          debug:
+            msg: |
+              {{ node_set_drain.stderr_lines }}
+              {{ node_set_drain.stdout_lines }}
+      when:
+        - node_set_cordon is defined
+        - node_set_cordon.changed

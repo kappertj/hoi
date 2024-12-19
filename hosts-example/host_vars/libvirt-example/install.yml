@@ -1,2 +1,3 @@
+---
 install_dev: vda
 install_method: libvirt

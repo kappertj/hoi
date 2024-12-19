@@ -1,15 +1,16 @@
+---
 openshift_ingress_controllers:
-- name: default
-  certfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.fullchain.pem
-  keyfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.key
-  #cert_content: "sdfgherh....."
-  #key_content: "dfghserhrsd...."
-  replicas: "{{ groups['infra'] | length }}"
-  #domain: "apps.{{ cluster }}.{{ base_domain }}"
-  nodeplacement:
-    nodeSelector:
-      matchLabels:
-        node-role.kubernetes.io/infra: ""
+  - name: default
+    certfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.fullchain.pem
+    keyfile: /opt/openshift_files/certs/{{ cluster }}/*.apps.{{ cluster }}.{{ base_domain }}.key
+    #cert_content: "sdfgherh....."
+    #key_content: "dfghserhrsd...."
+    replicas: "{{ groups['infra'] | length }}"
+    #domain: "apps.{{ cluster }}.{{ base_domain }}"
+    nodeplacement:
+      nodeSelector:
+        matchLabels:
+          node-role.kubernetes.io/infra: ""
 #      matchExpressions:
 #      - key: phase
 #        operator: NotIn

@@ -1,45 +1,43 @@
 ---
 - name: Get service facts on running machine
-  service_facts:
+  ansible.builtin.service_facts:
 
 - name: Check if update needed
-  set_fact:
+  ansible.builtin.set_fact:
     mirror_registry_install_command: "{% if ansible_facts.services['quay-app.service'].state == 'running' %}upgrade{% else %}install{% endif %}"
 
 - name: Ensure directories exists
-  file:
-    path: "{{ item }}"
-    state: directory
   loop:
     - "{{ mirror_registry_download_dir }}"
     - "{{ mirror_registry.directory }}"
-#    - "{{ mirror_registry.directory }}/pg-storage"
-#    - "{{ mirror_registry.directory }}/quay-storage"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
 
 - name: Download and extract mirror-registry tool
-  unarchive:
+  tags:
+    - download
+  ansible.builtin.unarchive:
     dest: "{{ mirror_registry_download_dir }}"
     src: "{{ mirror_registry_download_url }}"
     remote_src: true
-  tags:
-  - download
 
 - name: Slurp certs and setup for mirror-registry
-  include_tasks: mirror_registry_slurp_and_create.yml
   when:
-  - mirror_registry_cert.certfile is defined or mirror_registry_cert.cert_content is defined
-  - mirror_registry_cert.keyfile is defined or mirror_registry_cert.key_content is defined
+    - mirror_registry_cert.certfile is defined or mirror_registry_cert.cert_content is defined
+    - mirror_registry_cert.keyfile is defined or mirror_registry_cert.key_content is defined
+  ansible.builtin.include_tasks: mirror_registry_slurp_and_create.yml
 
 - name: Run installer
-  command:
+  register: mirror_registry_install_output
+  #  failed_when:
+  #  - mirror_registry_install_output.stderr != ''
+  tags:
+    - mirror_registry_run_installer
+  ansible.builtin.command:
     cmd: "{{ lookup('template', 'mirror-registry-command.j2') | replace('\n', ' ') }}"
     chdir: "{{ mirror_registry_download_dir }}"
-  register: mirror_registry_install_output
-#  failed_when:
-#  - mirror_registry_install_output.stderr != ''
-  tags:
-  - mirror_registry_run_installer
 
 - name: debug
-  debug:
+  ansible.builtin.debug:
     var: mirror_registry_install_output
