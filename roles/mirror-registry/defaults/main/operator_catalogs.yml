@@ -1,3 +1,4 @@
+---
 mirror_registry_operator_catalogs: |
   - catalog: registry.redhat.io/redhat/redhat-operator-index:v{{ install_version_major_minor }}
     full: false

@@ -1,38 +1,37 @@
 ---
 - name: Create Local Storage Namespace and subscriptions
-  k8s:
+  loop:
+    - local-storage-namespace.yml.j2
+    - local-storage-operatorgroup.yml.j2
+    - local-storage-operator-subscription.yml.j2
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'local_storage/' + item) | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
-  loop:
-  - local-storage-namespace.yml.j2
-  - local-storage-operatorgroup.yml.j2
-  - local-storage-operator-subscription.yml.j2
+      - strategic-merge
+      - merge
 
 - name: Wait for operator CRDs to appear
-  k8s_info:
-    kubeconfig: "{{ openshift_kubeconfig }}"
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: "{{ item }}"
   register: crds
   until: ( crds.resources | length ) > 0
   retries: 100
   loop:
-  - localvolumes.local.storage.openshift.io
+    - localvolumes.local.storage.openshift.io
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ openshift_kubeconfig }}"
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "{{ item }}"
 
 - name: Grab all hosts
-  set_fact:
+  ansible.builtin.set_fact:
     local_storage_all_nodes: "{{ groups['masters'] + groups['infra'] + ( groups['storage']| default([]) ) + groups['workers'] | unique }}"
 
 - name: Create LocalVolumes
-  k8s:
+  loop: "{{ local_storage_all_nodes }}"
+  when: hostvars[item]['local_storage'] is defined
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'local_storage/local-storage-operator-local-volume.yml.j2') | from_yaml }}"
-  loop: "{{ local_storage_all_nodes }}"
-  when: hostvars[item]['local_storage'] is defined
-  

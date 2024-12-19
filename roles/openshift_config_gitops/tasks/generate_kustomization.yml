@@ -1,16 +1,17 @@
+---
 - name: Find all generated files
-  find:
+  register: gitops_component_files
+  ansible.builtin.find:
     path: "{{ openshift_gitops_dir }}/{{ gitops_component }}/assets"
     file_type: file
-  register: gitops_component_files
 
 - name: Find all generated patches
-  find:
+  register: gitops_component_patches_strategic
+  ansible.builtin.find:
     path: "{{ openshift_gitops_dir }}/{{ gitops_component }}/patches"
     file_type: file
-  register: gitops_component_patches_strategic
 
 - name: Configure kustomization file
-  template:
+  ansible.builtin.template:
     src: common/kustomization.yaml.j2
     dest: "{{ openshift_gitops_dir }}/{{ gitops_component }}/kustomization.yaml"

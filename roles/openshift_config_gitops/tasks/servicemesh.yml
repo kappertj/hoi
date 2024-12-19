@@ -1,12 +1,12 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: servicemesh
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: servicemesh
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

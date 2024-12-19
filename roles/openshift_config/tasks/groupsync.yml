@@ -1,21 +1,21 @@
 ---
 - name: Slurp groupsync_ldap_ca_file
-  slurp:
-    src: "{{ groupsync_ldap_ca_file }}"
   register: groupsync_ldap_ca_file_contents
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.slurp:
+    src: "{{ groupsync_ldap_ca_file }}"
 
 - name: Apply Groupsync Cronjob template
-  k8s:
+  loop:
+    - ns
+    - sa
+    - cm
+    - ca
+    - clusterrole
+    - clusterrolebinding
+    - cronjob
+    - cluster-admin
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'groupsync/cronjob-ldap-group-sync-' + item + '.yml.j2') | from_yaml }}"
-  loop:
-  - ns
-  - sa
-  - cm
-  - ca
-  - clusterrole
-  - clusterrolebinding
-  - cronjob
-  - cluster-admin 

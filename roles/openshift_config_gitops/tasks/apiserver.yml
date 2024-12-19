@@ -1,79 +1,79 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: apiserver
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Set apiserver certificate
   block:
-  - name: Slurp API server cert
-    slurp:
-      src: "{{ apiserver_certificate.certfile }}"
-    register: apiserver_certificate_cert_file_content
-    when:
-    - apiserver_certificate.certfile is defined
-    - apiserver_certificate.cert_content is not defined
+    - name: Slurp API server cert
+      register: apiserver_certificate_cert_file_content
+      when:
+        - apiserver_certificate.certfile is defined
+        - apiserver_certificate.cert_content is not defined
+      ansible.builtin.slurp:
+        src: "{{ apiserver_certificate.certfile }}"
 
-  - name: Slurp API server key
-    slurp:
-      src: "{{ apiserver_certificate.keyfile }}"
-    register: apiserver_certificate_key_file_content
-    when:
-    - apiserver_certificate.keyfile is defined
-    - apiserver_certificate.key_content is not defined
+    - name: Slurp API server key
+      register: apiserver_certificate_key_file_content
+      when:
+        - apiserver_certificate.keyfile is defined
+        - apiserver_certificate.key_content is not defined
+      ansible.builtin.slurp:
+        src: "{{ apiserver_certificate.keyfile }}"
 
-  - name: Set apiserver certificate cert content facts
-    set_fact:
-      apiserver_certificate_cert_content: "{{ apiserver_certificate_cert_file_content.content | b64decode }}"
-    when:
-    - apiserver_certificate.certfile is defined
-    - apiserver_certificate.cert_content is not defined
+    - name: Set apiserver certificate cert content facts
+      when:
+        - apiserver_certificate.certfile is defined
+        - apiserver_certificate.cert_content is not defined
+      ansible.builtin.set_fact:
+        apiserver_certificate_cert_content: "{{ apiserver_certificate_cert_file_content.content | b64decode }}"
 
-  - name: Set apiserver certificate key content facts
-    set_fact:
-      apiserver_certificate_key_content: "{{ apiserver_certificate_key_file_content.content | b64decode }}"
-    when:
-    - apiserver_certificate.keyfile is defined
-    - apiserver_certificate.key_content is not defined
+    - name: Set apiserver certificate key content facts
+      when:
+        - apiserver_certificate.keyfile is defined
+        - apiserver_certificate.key_content is not defined
+      ansible.builtin.set_fact:
+        apiserver_certificate_key_content: "{{ apiserver_certificate_key_file_content.content | b64decode }}"
 
-  - name: Set apiserver certificate cert content facts
-    set_fact:
-      apiserver_certificate_cert_content: "{{ apiserver_certificate.cert_content }}"
-    when:
-    - apiserver_certificate.cert_content is defined
+    - name: Set apiserver certificate cert content facts
+      when:
+        - apiserver_certificate.cert_content is defined
+      ansible.builtin.set_fact:
+        apiserver_certificate_cert_content: "{{ apiserver_certificate.cert_content }}"
 
-  - name: Set apiserver certificate key content facts
-    set_fact:
-      apiserver_certificate_key_content: "{{ apiserver_certificate.key_content }}"
-    when:
-    - apiserver_certificate.key_content is defined
+    - name: Set apiserver certificate key content facts
+      when:
+        - apiserver_certificate.key_content is defined
+      ansible.builtin.set_fact:
+        apiserver_certificate_key_content: "{{ apiserver_certificate.key_content }}"
 
-  - name: Configure apiserver certificate SealedSecret
-    include_tasks: create_sealed_secret.yml
-    vars:
-      secret_template: "{{ lookup('template', 'apiserver/apiserver-certs.yml.j2') | from_yaml }}"
-      apply_to_cluster: false
-      sealed_secret_file: "{{ openshift_gitops_dir }}/apiserver/assets/{{ apiserver_certificate.name }}.yaml"
+    - name: Configure apiserver certificate SealedSecret
+      include_tasks: create_sealed_secret.yml
+      vars:
+        secret_template: "{{ lookup('template', 'apiserver/apiserver-certs.yml.j2') | from_yaml }}"
+        apply_to_cluster: false
+        sealed_secret_file: "{{ openshift_gitops_dir }}/apiserver/assets/{{ apiserver_certificate.name }}.yaml"
   when:
-  - apiserver_certificate is defined
+    - apiserver_certificate is defined
 
 - name: template APIServer certificate patches
-  template:
+  when:
+    - apiserver_certificate is defined
+  ansible.builtin.template:
     src: apiserver/apiserver_certificates.yaml.j2
     dest: "{{ openshift_gitops_dir }}/apiserver/patches/apiserver_certificates.yaml"
-  when:
-  - apiserver_certificate is defined
 
 - name: template APIServer certificate patches
-  template:
+  when:
+    - etcd_encryption | default (False)
+  ansible.builtin.template:
     src: apiserver/etcd_encryption.yaml.j2
     dest: "{{ openshift_gitops_dir }}/apiserver/patches/etcd_encryption.yaml"
-  when:
-  - etcd_encryption | default (False)
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: apiserver
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

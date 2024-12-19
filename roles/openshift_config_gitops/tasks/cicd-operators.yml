@@ -1,19 +1,20 @@
+---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: cicd-operators
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Get components to install
-  set_fact:
+  ansible.builtin.set_fact:
     cicd_components:
-    - "{{ cicd_operators_install_tekton | default(True) | ternary('cicd-operators/tekton', '') }}"
-    - "{{ cicd_operators_install_knative | default(True) | ternary('cicd-operators/knative', '') }}"
+      - "{{ cicd_operators_install_tekton | default(True) | ternary('cicd-operators/tekton', '') }}"
+      - "{{ cicd_operators_install_knative | default(True) | ternary('cicd-operators/knative', '') }}"
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: cicd-operators
     gitops_component_has_upstream: false
     gitops_component_extra_base_components: "{{ cicd_components | select() | list }}"
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

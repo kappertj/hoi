@@ -1,54 +1,54 @@
 ---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: logging
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Generate resources
-  template:
-    src: "logging/{{ item }}.j2"
-    dest: "{{ openshift_gitops_dir }}/logging/assets/{{ item }}"
   loop:
-  - cluster-logging-loki.yml
-  - lokistack-cluster.yaml
-  - lokistack-s3.yaml
+    - cluster-logging-loki.yml
+    - lokistack-cluster.yaml
+    - lokistack-s3.yaml
+  ansible.builtin.template:
+    src: logging/{{ item }}.j2
+    dest: "{{ openshift_gitops_dir }}/logging/assets/{{ item }}"
 
 - name: Generate s3 resources
-  template:
-    src: "logging/{{ item }}.j2"
-    dest: "{{ openshift_gitops_dir }}/logging/assets/{{ item }}"
   loop:
-  - create-s3-secret-rolebinding.yaml
-  - create-s3-secret-sa.yaml
-  - create-s3-secret.yaml
+    - create-s3-secret-rolebinding.yaml
+    - create-s3-secret-sa.yaml
+    - create-s3-secret.yaml
   when:
-  - loki_use_odf | default(True)
+    - loki_use_odf | default(True)
+  ansible.builtin.template:
+    src: logging/{{ item }}.j2
+    dest: "{{ openshift_gitops_dir }}/logging/assets/{{ item }}"
 
 - name: Generate external s3 config
-  include_tasks: create_sealed_secret.yml
   vars:
     secret_template: "{{ lookup('template', 'logging/logging-loki-s3.yaml.j2') | from_yaml }}"
     apply_to_cluster: false
     sealed_secret_file: "{{ openshift_gitops_dir }}/logging/assets/logging-loki-s3.yaml"
   when:
-  - not loki_use_odf | default(True)
+    - not loki_use_odf | default(True)
+  ansible.builtin.include_tasks: create_sealed_secret.yml
 
 - name: Generate patches
-  template:
-    src: "logging/{{ item }}.yaml.j2"
-    dest: "{{ openshift_gitops_dir }}/logging/patches/{{ item }}.yaml"
   loop:
-  - nodeselector-sub-cl
-  - nodeselector-sub-lo
+    - nodeselector-sub-cl
+    - nodeselector-sub-lo
   when:
-  - groups['infra'] | default([]) | length > 0
+    - groups['infra'] | default([]) | length > 0
+  ansible.builtin.template:
+    src: logging/{{ item }}.yaml.j2
+    dest: "{{ openshift_gitops_dir }}/logging/patches/{{ item }}.yaml"
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: logging
     gitops_component_has_upstream: false
     gitops_component_extra_base_components:
-    - logging-loki
+      - logging-loki
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

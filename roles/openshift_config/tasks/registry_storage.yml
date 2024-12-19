@@ -4,114 +4,114 @@
 - name: Registry on PVC
   block:
     - name: Create PVC if name is defined
-      k8s:
+      when:
+        - registry_storage_claim_name is defined
+      kubernetes.core.k8s:
         kubeconfig: "{{ openshift_kubeconfig }}"
         state: present
         definition: "{{ lookup('template', 'registry_storage/registry_storage_pvc.yaml.j2') | from_yaml }}"
-      when:
-      - registry_storage_claim_name is defined
 
     - name: Update registry config
       k8s:
         kubeconfig: "{{ openshift_kubeconfig }}"
         state: present
         merge_type:
-        - merge
-        - strategic-merge
+          - merge
+          - strategic-merge
         definition: "{{ lookup('template', 'registry_storage/registry_storage_imageregistry_config.yaml.j2') | from_yaml }}"
   when:
-  - registry_storage_type_pvc
-  - not registry_storage_type_obc
+    - registry_storage_type_pvc
+    - not registry_storage_type_obc
 
 - name: Registry on OBC
   block:
     - name: Create ObjectBucketClaim for obc-registry
-      k8s:
+      kubernetes.core.k8s:
         kubeconfig: "{{ openshift_kubeconfig }}"
         state: present
         merge_type:
-        - merge
-        - strategic-merge
+          - merge
+          - strategic-merge
         definition: "{{ lookup('template', 'registry_storage/registry_storage_obc.yaml.j2') | from_yaml }}"
 
-    - name: "Wait for Bucket to exist"
-      k8s_info:
-        kubeconfig: "{{ openshift_kubeconfig }}"
-        api_version: objectbucket.io/v1alpha1
-        kind: ObjectBucketClaim
-        name: obc-registry
-        namespace: openshift-storage
+    - name: Wait for Bucket to exist
       register: bucket
       until: (bucket.resources | length) > 0
       retries: 300
       delay: 10
-
-    - name: "Wait for Bucket to have status"
-      k8s_info:
+      kubernetes.core.k8s_info:
         kubeconfig: "{{ openshift_kubeconfig }}"
         api_version: objectbucket.io/v1alpha1
         kind: ObjectBucketClaim
         name: obc-registry
         namespace: openshift-storage
+
+    - name: Wait for Bucket to have status
       register: bucket
       until:
-      - bucket.resources is defined
-      - (bucket.resources | length) > 0
-      - (bucket.resources | first).status is defined
+        - bucket.resources is defined
+        - (bucket.resources | length) > 0
+        - (bucket.resources | first).status is defined
       retries: 300
       delay: 10
-
-    - name: "Wait for Bucket to become bound"
-      k8s_info:
+      kubernetes.core.k8s_info:
         kubeconfig: "{{ openshift_kubeconfig }}"
         api_version: objectbucket.io/v1alpha1
         kind: ObjectBucketClaim
         name: obc-registry
         namespace: openshift-storage
+
+    - name: Wait for Bucket to become bound
       register: bucket
       until: (bucket.resources | first).status.phase == "Bound"
       retries: 300
       delay: 10
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ openshift_kubeconfig }}"
+        api_version: objectbucket.io/v1alpha1
+        kind: ObjectBucketClaim
+        name: obc-registry
+        namespace: openshift-storage
 
     - name: Get OBC secret
-      k8s_info:
+      register: secret_obc_registry_openshift_storage
+      kubernetes.core.k8s_info:
         kubeconfig: "{{ openshift_kubeconfig }}"
         api_version: v1
         kind: Secret
         name: obc-registry
         namespace: openshift-storage
-      register: secret_obc_registry_openshift_storage
 
     - name: Get OBC configmap
-      k8s_info:
+      register: configmap_obc_registry_openshift_storage
+      kubernetes.core.k8s_info:
         kubeconfig: "{{ openshift_kubeconfig }}"
         api_version: v1
         kind: ConfigMap
         name: obc-registry
         namespace: openshift-storage
-      register: configmap_obc_registry_openshift_storage
 
     - name: Get S3 route
-      k8s_info:
+      register: route_s3_registry_openshift_storage
+      kubernetes.core.k8s_info:
         kubeconfig: "{{ openshift_kubeconfig }}"
         api_version: v1
         kind: Route
         name: s3
         namespace: openshift-storage
-      register: route_s3_registry_openshift_storage
-    
+
     - name: Create secret and deploy registry
       k8s:
         kubeconfig: "{{ openshift_kubeconfig }}"
         state: present
         merge_type:
-        - merge
-        - strategic-merge
+          - merge
+          - strategic-merge
         definition: "{{ lookup('template', 'registry_storage/' + item) | from_yaml }}"
       loop:
         - registry_storage_secret_obc.yaml.j2
         - registry_storage_imageregistry_config_obc.yaml.j2
 
   when:
-  - registry_storage_type_obc
-  - not registry_storage_type_pvc
+    - registry_storage_type_obc
+    - not registry_storage_type_pvc

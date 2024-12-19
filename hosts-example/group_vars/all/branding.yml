@@ -1,3 +1,4 @@
+---
 custom_logo_file: /some/path/on/ansible/controller.svg
 custom_background_file: /some/other/path/on/ansible/controller.svg
 custom_product_name: HCS OpenShift Container Platform

@@ -1,10 +1,11 @@
+---
 network_config:
-- device: ens192
-  address: 192.168.0.100
-  netmask: 255.255.255.0
-  gateway: 192.168.0.254
-  is_default_gateway: true
-  dns:
-  - 192.168.0.1
-  - 8.8.8.8
-  vmware_net: OCPNet
+  - device: ens192
+    address: 192.168.0.100
+    netmask: 255.255.255.0
+    gateway: 192.168.0.254
+    is_default_gateway: true
+    dns:
+      - 192.168.0.1
+      - 8.8.8.8
+    vmware_net: OCPNet

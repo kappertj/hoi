@@ -1,18 +1,19 @@
+---
 - name: Ensure gitops directories exist
-  include_tasks:
-    file: create_gitops_dirs.yml
   vars:
     gitops_component: proxy
+  ansible.builtin.include_tasks:
+    file: create_gitops_dirs.yml
 
 - name: Create asset files
-  template:
-    src: "proxy/{{ item.file }}.j2"
-    dest: "{{ openshift_gitops_dir }}/proxy/assets/{{ item.file }}"
   loop:
-  - file: proxy.yaml
+    - file: proxy.yaml
+  ansible.builtin.template:
+    src: proxy/{{ item.file }}.j2
+    dest: "{{ openshift_gitops_dir }}/proxy/assets/{{ item.file }}"
 
 - name: Generate kustomization file
-  include_tasks:
-    file: generate_kustomization.yml
   vars:
     gitops_component: proxy
+  ansible.builtin.include_tasks:
+    file: generate_kustomization.yml

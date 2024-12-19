@@ -1,3 +1,4 @@
+---
 vcenters:
   dcr1:
     hostname: vcenter1.example.com
@@ -15,4 +16,3 @@ vcenters:
     datastore: DCR2-STORE
     iso_datastore: DCR2-ISO
     cluster: CL-DCR2
-

@@ -1,12 +1,11 @@
 ---
 - name: Add subscription for Tekton pipelines Operator
-  k8s:
+  loop:
+    - tekton-subscription.yaml.j2
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'deploy_tekton/' + item) | from_yaml }}"
     merge_type:
-    - strategic-merge
-    - merge
-  loop:
-  - tekton-subscription.yaml.j2
-
+      - strategic-merge
+      - merge

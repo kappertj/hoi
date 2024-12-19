@@ -1,14 +1,14 @@
 ---
 - name: Add chrony machineConfigs
-  k8s:
+  loop:
+    - master
+    - worker
+  loop_control:
+    loop_var: chrony_role
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     merge_type:
-    - merge
-    - strategic-merge
+      - merge
+      - strategic-merge
     definition: "{{ lookup('template', 'chrony/99-chrony-machineconfig.yml.j2') | from_yaml }}"
-  loop:
-  - master
-  - worker
-  loop_control:
-    loop_var: chrony_role

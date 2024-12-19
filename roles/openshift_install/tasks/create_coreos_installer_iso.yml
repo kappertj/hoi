@@ -1,19 +1,22 @@
+---
 - name: Set iso path
-  set_fact:
+  ansible.builtin.set_fact:
     coreos_baseiso_file: "{{ '/var/www/html/coreos/' + ( install_version ) + '/' + ( coreos_urls.iso.url | basename ) }}"
 
 - name: Delete any old custom iso
-  file:
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.file:
     path: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso"
     state: absent
-  delegate_to: "{{ bastion_host }}"
 
 - name: Create custom .iso for host
-  command: "{{ coreos_installer_command }} iso customize {% for file in nmconnection_files.files %}--network-keyfile {{ file.path }} {% endfor %} --dest-device /dev/{{ install_dev }} --dest-ignition /var/www/html/{{ inventory_hostname }}.ign --live-karg-append console=tty0 --live-karg-append console=ttyS0 --live-karg-append nomodeset -o {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso {{ coreos_baseiso_file }}"
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.command: "{{ coreos_installer_command }} iso customize {% for file in nmconnection_files.files %}--network-keyfile {{ file.path }} {% endfor %}
+    --dest-device /dev/{{ install_dev }} --dest-ignition /var/www/html/{{ inventory_hostname }}.ign --live-karg-append console=tty0 --live-karg-append console=ttyS0
+    --live-karg-append nomodeset -o {{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso {{ coreos_baseiso_file }}"
 
 - name: Open up permissions on custom iso to allow downloading
-  file:
-    path: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso"
-    mode: 0644
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.file:
+    path: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso"
+    mode: 420

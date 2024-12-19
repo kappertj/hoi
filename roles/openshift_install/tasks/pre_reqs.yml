@@ -1,38 +1,43 @@
 ---
 - name: get number of masters
-  set_fact:
-    number_of_control_plane_nodes_targeted: "{{ ansible_play_hosts_all | intersect(groups['masters'])  | length }}"
-  run_once: True
+  run_once: true
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.set_fact:
+    number_of_control_plane_nodes_targeted: "{{ ansible_play_hosts_all | intersect(groups['masters'])  | length }}"
 
 - name: Validate DNS records
   vars:
     api_domain_name:
-      - "api.{{ cluster }}.{{ base_domain }}"
-    default_ingress_domain_name: "apps.{{ cluster }}.{{ base_domain }}"
+      - api.{{ cluster }}.{{ base_domain }}
+    default_ingress_domain_name: apps.{{ cluster }}.{{ base_domain }}
     default_ingress_controllers:
       - domain: "{{ default_ingress_domain_name }}"
-  include_tasks: validate_dns.yml
-  loop: "{{ api_domain_name + openshift_ingress_controllers | default([default_ingress_controllers]) | map(attribute='domain', default=(default_ingress_domain_name)) | map('regex_replace', '^(.*)$', 'hcs.\\1') | list }}"
+  loop: "{{ api_domain_name + openshift_ingress_controllers | default([default_ingress_controllers]) | map(attribute='domain', default=(default_ingress_domain_name))
+    | map('regex_replace', '^(.*)$', 'hcs.\\1') | list }}"
+  ansible.builtin.include_tasks: validate_dns.yml
 
 - name: Check if there's an existing cluster API running
-  uri:
-    url: "https://api.{{ cluster }}.{{ base_domain }}:6443/healthz"
-    force: True
-    validate_certs: False
-    timeout: 3
-  run_once: True
+  run_once: true
   delegate_to: "{{ bastion_host }}"
-  failed_when: False
+  failed_when: false
   register: existing_cluster_api_response
+  ansible.builtin.uri:
+    url: https://api.{{ cluster }}.{{ base_domain }}:6443/healthz
+    force: true
+    validate_certs: false
+    timeout: 3
 
 - name: Get some facts from the bastion
-  gather_facts:
-  run_once: True
+  run_once: true
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.gather_facts:
 
 - name: Abort if possibly destroying an existing cluster
-  assert:
+  when:
+    - do_as_i_say_not_what_i_want | default('NOPE') != ansible_date_time.date
+  run_once: true
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.assert:
     success_msg: |
       {% if existing_cluster_api_response.status == -1 %}No existing API found.{% else %}Existing API found, but only {{ number_of_control_plane_nodes_targeted }} control-plane node(s) targeted.{% endif %}
     fail_msg: |
@@ -42,144 +47,135 @@
       Please see the section called "Installation Safeguards" in README.md for
       the magic invocation that will allow you to continue.
     that:
-    - (existing_cluster_api_response.status == -1) or (number_of_control_plane_nodes_targeted | int < 2)
-  when:
-  - do_as_i_say_not_what_i_want | default('NOPE') != ansible_date_time.date
-  run_once: True
-  delegate_to: "{{ bastion_host }}"
+      - (existing_cluster_api_response.status == -1) or (number_of_control_plane_nodes_targeted | int < 2)
 
 - name: ensure necessary software is installed
-  dnf:
-    name:
-    - python3-magic
-    - python3-pip
-    - python3-pyyaml
-    - httpd
-    state: present
   delegate_to: "{{ bastion_host }}"
   run_once: true
+  ansible.builtin.dnf:
+    name:
+      - python3-magic
+      - python3-pip
+      - python3-pyyaml
+      - httpd
+    state: present
 
 - name: Ensure services are running
-  service:
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  ansible.builtin.service:
     name: httpd
     state: started
     enabled: true
-  delegate_to: "{{ bastion_host }}"
-  run_once: true
 
 - name: Get Service Facts
-  service_facts:
   delegate_to: "{{ bastion_host }}"
   run_once: true
+  ansible.builtin.service_facts:
 
 - name: Ensure the httpd service is accessible
-  firewalld:
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+    - ansible_facts.services['firewalld.service'] is defined
+    - ansible_facts.services['firewalld.service'].state == 'running'
+  ansible.posix.firewalld:
     service: http
     immediate: true
     permanent: true
     state: enabled
-  delegate_to: "{{ bastion_host }}"
-  run_once: true
-  when:
-  - ansible_facts.services['firewalld.service'] is defined
-  - ansible_facts.services['firewalld.service'].state == 'running'
 
 - name: Add PIP packages
-  pip:
-    name:
-    - openshift
-    - pyvmomi
-    - netaddr
-    state: present
   delegate_to: "{{ bastion_host }}"
   run_once: true
+  ansible.builtin.pip:
+    name:
+      - openshift
+      - pyvmomi
+      - netaddr
+    state: present
 
 - name: Check if install_version should be set to the latest available stable version
   block:
-  - name: get release.txt
-    uri:
-      url: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-{{ install_version }}/release.txt
-      return_content: true
-    register: latest_stable_version
-    delegate_to: "{{ bastion_host }}"
+    - name: get release.txt
+      register: latest_stable_version
+      delegate_to: "{{ bastion_host }}"
+      ansible.builtin.uri:
+        url: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-{{ install_version }}/release.txt
+        return_content: true
 
-  - name: reset install_version to latest available stable version
-    set_fact:
-      install_version: "{{ latest_stable_version.content | regex_search('^Name:.*$', multiline=True) | regex_replace('^Name:\\s+(4.\\d+.\\d+)$', '\\1') }}"
+    - name: reset install_version to latest available stable version
+      set_fact:
+        install_version: "{{ latest_stable_version.content | regex_search('^Name:.*$', multiline=True) | regex_replace('^Name:\\s+(4.\\d+.\\d+)$', '\\1') }}"
   when:
-  - install_version is regex('^4\\.\\d+$')
+    - install_version is regex('^4\\.\\d+$')
 
 - name: Show install_version
-  debug:
+  run_once: true
+  ansible.builtin.debug:
     msg: |
       Install version: {{ install_version }}
-  run_once: True
 
 - name: Ensure directories are emptied out
-  file:
+  loop:
+    - "{{ openshift_ignition_dir }}"
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+    - create_new_cluster is defined
+    - inventory_hostname == ansible_play_hosts_all[0]
+  ansible.builtin.file:
     path: "{{ item }}"
     state: absent
-  loop:
-  - "{{ openshift_ignition_dir }}"
-  delegate_to: "{{ bastion_host }}"
-  run_once: true
-  when:
-  - create_new_cluster is defined
-  - inventory_hostname == ansible_play_hosts_all[0]
 
 - name: Ensure directory paths exist
-  file:
-    path: "{{ item }}"
-    state: directory
   loop:
-  - "{{ openshift_ignition_dir }}"
-  - "{{ openshift_installer_dir }}"
-  - /var/www/html/coreos
-  - "/var/www/html/coreos/{{ install_version }}"
+    - "{{ openshift_ignition_dir }}"
+    - "{{ openshift_installer_dir }}"
+    - /var/www/html/coreos
+    - /var/www/html/coreos/{{ install_version }}
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when:
-  - inventory_hostname == ansible_play_hosts_all[0]
+    - inventory_hostname == ansible_play_hosts_all[0]
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
 
 - name: Check if OpenShift client exists
-  stat:
-    path: "{{ openshift_installer_dir }}/oc"
   register: oc
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when:
-  - inventory_hostname == ansible_play_hosts_all[0]
+    - inventory_hostname == ansible_play_hosts_all[0]
   tags:
-  - download
+    - download
+  ansible.builtin.stat:
+    path: "{{ openshift_installer_dir }}/oc"
 
 - name: Check OpenShift client version
-  shell:
-    cmd: /usr/local/bin/oc version -o json --client=true
   register: oc_version_output
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when:
-  - inventory_hostname == ansible_play_hosts_all[0]
-  - oc.stat.exists
+    - inventory_hostname == ansible_play_hosts_all[0]
+    - oc.stat.exists
   tags:
-  - download
+    - download
+  ansible.builtin.shell:
+    cmd: /usr/local/bin/oc version -o json --client=true
 
 - name: Set oc_version fact
-  set_fact:
-    oc_version: "{{ oc_version_output.stdout | from_json | json_query('releaseClientVersion') }}"
   delegate_to: "{{ bastion_host }}"
   when:
-  - inventory_hostname == ansible_play_hosts_all[0]
-  - oc.stat.exists
+    - inventory_hostname == ansible_play_hosts_all[0]
+    - oc.stat.exists
   tags:
-  - download
+    - download
+  ansible.builtin.set_fact:
+    oc_version: "{{ oc_version_output.stdout | from_json | json_query('releaseClientVersion') }}"
 
 - name: Download OpenShift installer/client binaries
-  unarchive:
-    src: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/{{ install_version }}/openshift-{{ item.type }}-linux-{{ install_version }}.tar.gz
-    remote_src: true
-    dest: "{{ openshift_installer_dir }}"
-    extra_opts: "{{ item.binary }}"
   loop:
     - type: install
       binary: openshift-install
@@ -188,94 +184,99 @@
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when:
-  - inventory_hostname == ansible_play_hosts_all[0]
-  - (not oc.stat.exists) or (oc_version != install_version)
+    - inventory_hostname == ansible_play_hosts_all[0]
+    - (not oc.stat.exists) or (oc_version != install_version)
   tags:
-  - download
+    - download
+  ansible.builtin.unarchive:
+    src: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/{{ install_version }}/openshift-{{ item.type }}-linux-{{ install_version }}.tar.gz
+    remote_src: true
+    dest: "{{ openshift_installer_dir }}"
+    extra_opts: "{{ item.binary }}"
 
 - name: Copy oc binary to path
-  copy:
+  delegate_to: "{{ bastion_host }}"
+  run_once: true
+  when:
+    - inventory_hostname == ansible_play_hosts_all[0]
+  ansible.builtin.copy:
     src: "{{ openshift_installer_dir }}/oc"
-    remote_src: yes
+    remote_src: true
     dest: /usr/local/bin/oc
-    mode: 0755
+    mode: 493
     owner: root
     group: root
-  delegate_to: "{{ bastion_host }}"
-  run_once: true
-  when:
-  - inventory_hostname == ansible_play_hosts_all[0]
 
 - name: Download filetranspile
-  get_url:
-    dest: "{{ openshift_installer_dir }}"
-    mode: 0755
-    url: "{{ filetranspile_url }}"
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when:
-  - inventory_hostname == ansible_play_hosts_all[0]
+    - inventory_hostname == ansible_play_hosts_all[0]
   tags:
-  - download
+    - download
+  ansible.builtin.get_url:
+    dest: "{{ openshift_installer_dir }}"
+    mode: 493
+    url: "{{ filetranspile_url }}"
 
 - name: Download coreos-installer tool
-  get_url:
-    dest: "{{ openshift_installer_dir }}"
-    mode: 0755
-    url: "{{ coreos_installer.url }}"
-    checksum: "{{ coreos_installer.checksum | default(omit) }}"
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when:
-  - install_version is version('4.10', '>=')
+    - install_version is version('4.10', '>=')
   tags:
-  - download
+    - download
+  ansible.builtin.get_url:
+    dest: "{{ openshift_installer_dir }}"
+    mode: 493
+    url: "{{ coreos_installer.url }}"
+    checksum: "{{ coreos_installer.checksum | default(omit) }}"
 
 - name: Extract artefact URLs and checksums from openshift-install
-  command:
-    cmd: "{{ openshift_installer_dir }}/openshift-install coreos print-stream-json"
   register: install_data
   delegate_to: "{{ bastion_host }}"
+  ansible.builtin.command:
+    cmd: "{{ openshift_installer_dir }}/openshift-install coreos print-stream-json"
 
 - name: Set CoreOS URL facts
-  set_fact:
-    coreos_urls: "{{ coreos_urls }}"
   vars:
     coreos_urls:
       iso:
         url: "{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.iso.disk.location') }}"
-        checksum: "sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.iso.disk.sha256') }}"
+        checksum: sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.iso.disk.sha256') }}
       kernel:
         url: "{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.kernel.location') }}"
-        checksum: "sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.kernel.sha256') }}"
+        checksum: sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.kernel.sha256') }}
       initramfs:
         url: "{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.initramfs.location') }}"
-        checksum: "sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.initramfs.sha256') }}"
+        checksum: sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.initramfs.sha256') }}
       rootfs:
         url: "{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.rootfs.location') }}"
-        checksum: "sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.rootfs.sha256') }}"
+        checksum: sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.pxe.rootfs.sha256') }}
       image:
         url: "{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.\"raw.gz\".disk.location') }}"
-        checksum: "sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats.\"raw.gz\".disk.sha256') }}"
+        checksum: sha256:{{ install_data.stdout | from_json | json_query('architectures.x86_64.artifacts.metal.formats."raw.gz".disk.sha256') }}
+  ansible.builtin.set_fact:
+    coreos_urls: "{{ coreos_urls }}"
 
 - name: Download coreos images
-  get_url:
-    url: "{{ item.url }}"
-    dest: "/var/www/html/coreos/{{ install_version }}/{{ item.url | basename }}"
-    checksum: "{{ item.checksum | default(omit) }}"
   delegate_to: "{{ bastion_host }}"
   run_once: true
   when: inventory_hostname == ansible_play_hosts_all[0]
   loop:
-  - url: "{{ coreos_urls.iso.url }}"
-    checksum: "{{ coreos_urls.iso.checksum }}"
-  - url: "{{ coreos_urls.kernel.url }}"
-    checksum: "{{ coreos_urls.kernel.checksum  }}"
-  - url: "{{ coreos_urls.initramfs.url }}"
-    checksum: "{{ coreos_urls.initramfs.checksum  }}"
-  - url: "{{ coreos_urls.rootfs.url }}"
-    checksum: "{{ coreos_urls.rootfs.checksum  }}"
-  - url: "{{ coreos_urls.image.url }}"
-    checksum: "{{ coreos_urls.image.checksum  }}"
+    - url: "{{ coreos_urls.iso.url }}"
+      checksum: "{{ coreos_urls.iso.checksum }}"
+    - url: "{{ coreos_urls.kernel.url }}"
+      checksum: "{{ coreos_urls.kernel.checksum  }}"
+    - url: "{{ coreos_urls.initramfs.url }}"
+      checksum: "{{ coreos_urls.initramfs.checksum  }}"
+    - url: "{{ coreos_urls.rootfs.url }}"
+      checksum: "{{ coreos_urls.rootfs.checksum  }}"
+    - url: "{{ coreos_urls.image.url }}"
+      checksum: "{{ coreos_urls.image.checksum  }}"
   tags:
-  - download
+    - download
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: /var/www/html/coreos/{{ install_version }}/{{ item.url | basename }}
+    checksum: "{{ item.checksum | default(omit) }}"

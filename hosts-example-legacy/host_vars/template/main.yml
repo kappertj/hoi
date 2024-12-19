@@ -1,3 +1,4 @@
+---
 # network_config[*].mac, network)config[*].bridge, and virt_host are
 # only used for libvirt installations
 #
@@ -6,28 +7,28 @@
 install_method: vmware
 install_dev: sda
 network_config:
-- device: ens192
-  mac: "52:54:00:00:01:29"
-  address: 10.1.0.29
-  netmask: 255.255.255.0
-  gateway: 10.1.0.1
-  is_default_gateway: True
-  dns:
-  - 10.1.0.10
-  bridge: okd
-  vmware_net: VL_OCP
-- device: bond0
-  slaves:
-  - device: enp1s0
-    mac: 01:02:03:04:05:06
-  - device: enp2s0
-    mac: 07:08:09:0a:0b:0c
-  address: 10.1.0.30
-  netmask: 255.255.255.0
-  gateway: 10.1.0.1
-  is_default_gateway: True
-  dns:
-  - 10.1.0.10
+  - device: ens192
+    mac: "52:54:00:00:01:29"
+    address: 10.1.0.29
+    netmask: 255.255.255.0
+    gateway: 10.1.0.1
+    is_default_gateway: true
+    dns:
+      - 10.1.0.10
+    bridge: okd
+    vmware_net: VL_OCP
+  - device: bond0
+    slaves:
+      - device: enp1s0
+        mac: "01:02:03:04:05:06"
+      - device: enp2s0
+        mac: "07:08:09:0a:0b:0c"
+    address: 10.1.0.30
+    netmask: 255.255.255.0
+    gateway: 10.1.0.1
+    is_default_gateway: true
+    dns:
+      - 10.1.0.10
 
 image_size: 120G
 virt_host: hypervisor.example.com
@@ -43,10 +44,10 @@ vmware:
   guest_id: rhel7_64Guest
   hardware_version: 13
   customvalues:
-  - key: "disk.EnableUUID"
-    value: "true"
+    - key: disk.EnableUUID
+      value: "true"
 
 # Remember to quote labels with periods and slashes
 extra_node_labels:
-  "topology.kubernetes.io/region": amersfoort
-  "topology.kubernetes.io/zone": dc1
+  topology.kubernetes.io/region: amersfoort
+  topology.kubernetes.io/zone: dc1

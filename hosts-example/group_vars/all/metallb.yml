@@ -1,15 +1,16 @@
+---
 metallb:
   asn: 64513
   addresspools:
-  - name: ocp
-    addresses:
-    - 10.1.0.102-10.1.0.110
+    - name: ocp
+      addresses:
+        - 10.1.0.102-10.1.0.110
   peers:
-  - name: ocp
-    asn: 64512
-    address: 10.1.0.52
+    - name: ocp
+      asn: 64512
+      address: 10.1.0.52
   bgpadvertisements:
-  - name: ocp
-    addresspools:
-    - ocp
+    - name: ocp
+      addresspools:
+        - ocp
   l2advertisements: []

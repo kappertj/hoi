@@ -6,7 +6,7 @@
 
 - name: Run yamlmunger to parse icsp results
   ansible.builtin.script:
-    cmd: "yamlmunger.py {{ mirror_registry.directory }}/oc-mirror-workspace/results-*/*.yaml"
+    cmd: yamlmunger.py {{ mirror_registry.directory }}/oc-mirror-workspace/results-*/*.yaml
   register: combined_output
 
 - name: Store processed results for later usage
@@ -16,11 +16,10 @@
 
 - name: Run yamlmunger to parse release-signatures
   ansible.builtin.script:
-    cmd: "yamlmunger.py {{ mirror_registry.directory }}/oc-mirror-workspace/results-*/release-signatures/*json"
+    cmd: yamlmunger.py {{ mirror_registry.directory }}/oc-mirror-workspace/results-*/release-signatures/*json
   register: combined_output
 
 - name: Store processed results for later usage
   ansible.builtin.copy:
     dest: "{{ mirror_registry_download_dir }}/cluster-manifests/release-signatures.yaml"
     content: "{{ combined_output.stdout }}"
- 

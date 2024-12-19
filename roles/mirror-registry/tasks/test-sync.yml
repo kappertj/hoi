@@ -1,40 +1,40 @@
 ---
 - name: Sync operators
   hosts:
-  - localhost
-  gather_facts: yes
+    - localhost
+  gather_facts: true
   become: false
   vars:
     operator_catalogs:
-    - name: rh-operators
-      upstream_catalog: registry.redhat.io/redhat/redhat-operator-index
-      #      operators_to_sync:
-      #      - amq-online
-      #      - devspaces
-      #      - web-terminal
+      - name: rh-operators
+        upstream_catalog: registry.redhat.io/redhat/redhat-operator-index
+    #      operators_to_sync:
+    #      - amq-online
+    #      - devspaces
+    #      - web-terminal
     install_version: 4.10
     install_version_major_minor: "{{ install_version | regex_replace('^([0-9]+\\.[0-9]+).*$', '\\1') }}"
   tasks:
-  - name: Ensure .docker directory exists
-    file:
-      path: "{{ ansible_env.HOME }}/.docker"
-      state: directory
+    - name: Ensure .docker directory exists
+      file:
+        path: "{{ ansible_env.HOME }}/.docker"
+        state: directory
 
-  - name: Ensure we are logged in to the RH registry
-    copy:
-      dest: "{{ ansible_env.HOME }}/.docker/config.json'"
-      content: "{{ openshift_pullsecret }}"
-    tags:
-    - docker_login
+    - name: Ensure we are logged in to the RH registry
+      copy:
+        dest: "{{ ansible_env.HOME }}/.docker/config.json'"
+        content: "{{ openshift_pullsecret }}"
+      tags:
+        - docker_login
 
-  - name: Run oc-mirror to get list of operators
-    command:
-      cmd:  "oc-mirror list operators --catalog={{ item.upstream_catalog }}:v{{ install_version_major_minor }}"
-    changed_when: false
-    register: oc_mirror_operator_output
-    loop: "{{ operator_catalogs }}"
+    - name: Run oc-mirror to get list of operators
+      command:
+        cmd: oc-mirror list operators --catalog={{ item.upstream_catalog }}:v{{ install_version_major_minor }}
+      changed_when: false
+      register: oc_mirror_operator_output
+      loop: "{{ operator_catalogs }}"
 
-  - name: Generate template
-    template:
-      src: template.yaml.j2
-      dest: "/tmp/imagesetconfiguration.yaml"
+    - name: Generate template
+      template:
+        src: template.yaml.j2
+        dest: /tmp/imagesetconfiguration.yaml

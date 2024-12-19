@@ -1,5 +1,8 @@
+---
 - name: Remove old machine
-  vmware_guest:
+  delegate_to: "{{ bastion_host }}"
+  become: true
+  community.vmware.vmware_guest:
     hostname: "{{ vcenters[vmware.vcenter].hostname }}"
     username: "{{ vcenters[vmware.vcenter].username }}"
     password: "{{ vcenters[vmware.vcenter].password }}"
@@ -9,11 +12,15 @@
     datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
     state: absent
     force: true
+
+- name: Upload Image
   delegate_to: "{{ bastion_host }}"
   become: true
 
-- name: Upload Image
-  vsphere_copy:
+  # extra_disks are not created in different datastores due to a defect in the vmware_guest module
+  # https://github.com/ansible-collections/community.vmware/issues/931
+  # Tasks "add a new disk to above VM" and "(Re)start machine with install" have been added as a workaround.
+  community.vmware.vsphere_copy:
     hostname: "{{ vcenters[vmware.vcenter].hostname }}"
     username: "{{ vcenters[vmware.vcenter].username }}"
     password: "{{ vcenters[vmware.vcenter].password }}"
@@ -21,30 +28,27 @@
     src: "{{ coreos_iso_output_dir }}/{{ inventory_hostname }}.iso"
     datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
     datastore: "{{ vcenters[vmware.vcenter].iso_datastore }}"
-    path: "iso/{{ inventory_hostname }}.iso"
+    path: iso/{{ inventory_hostname }}.iso
     timeout: "{{ vcenters[vmware.vcenter].copy_timeout | default(omit) }}"
-  delegate_to: "{{ bastion_host }}"
-  become: true
-
-# extra_disks are not created in different datastores due to a defect in the vmware_guest module
-# https://github.com/ansible-collections/community.vmware/issues/931
-# Tasks "add a new disk to above VM" and "(Re)start machine with install" have been added as a workaround.
 
 - name: Create disk config
-  set_fact:
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.set_fact:
     vm_disks: "{{ lookup('template', 'vmware_disks.yml.j2') | from_yaml | list }}"
 #    vm_disks: "{{ lookup('template', 'vmware_disks.yml.j2') | from_yaml | list + (extra_disks | default([])) }}"
-  delegate_to: "{{ bastion_host }}"
 
 - name: Debug vmware networks
-  debug:
+  delegate_to: "{{ bastion_host }}"
+  ansible.builtin.debug:
     verbosity: 1
     msg: |
       "{{ network_config | json_query('[*].{name: name}') | to_nice_yaml }}"
-  delegate_to: "{{ bastion_host }}"
 
 - name: (Re)create machine with install
-  vmware_guest:
+  delegate_to: "{{ bastion_host }}"
+  become: true
+  throttle: 1
+  community.vmware.vmware_guest:
     hostname: "{{ vcenters[vmware.vcenter].hostname }}"
     username: "{{ vcenters[vmware.vcenter].username }}"
     password: "{{ vcenters[vmware.vcenter].password }}"
@@ -67,12 +71,12 @@
       num_cpus: "{{ vmware.vcpu }}"
       boot_firmware: "{{ vmware.boot_firmware | default(omit) }}"
     disk: "{{ vm_disks }}"
-  delegate_to: "{{ bastion_host }}"
-  become: true
-  throttle: 1
 
 - name: add a new disk to above VM
-  vmware_guest_disk:
+  delegate_to: "{{ bastion_host }}"
+  become: true
+  when: (extra_disks is defined) and (extra_disks|length > 0)
+  community.vmware.vmware_guest_disk:
     hostname: "{{ vcenters[vmware.vcenter].hostname }}"
     username: "{{ vcenters[vmware.vcenter].username }}"
     password: "{{ vcenters[vmware.vcenter].password }}"
@@ -81,12 +85,11 @@
     folder: "{{ vmware.folder }}"
     datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
     disk: "{{ extra_disks }}"
-  delegate_to: "{{ bastion_host }}"
-  become: true
-  when: (extra_disks is defined) and (extra_disks|length > 0)
 
 - name: (Re)start machine with install
-  vmware_guest:
+  delegate_to: "{{ bastion_host }}"
+  become: true
+  community.vmware.vmware_guest:
     hostname: "{{ vcenters[vmware.vcenter].hostname }}"
     username: "{{ vcenters[vmware.vcenter].username }}"
     password: "{{ vcenters[vmware.vcenter].password }}"
@@ -96,5 +99,3 @@
     cluster: "{{ vcenters[vmware.vcenter].cluster }}"
     datacenter: "{{ vcenters[vmware.vcenter].datacenter }}"
     state: poweredon
-  delegate_to: "{{ bastion_host }}"
-  become: true

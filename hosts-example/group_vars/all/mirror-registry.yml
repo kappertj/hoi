@@ -1,3 +1,4 @@
+---
 mirror_registry_cert:
   certfile: /opt/openshift_files/certs/{{ cluster }}/{{ mirror_registry.hostname }}.fullchain.pem
   keyfile: /opt/openshift_files/certs/{{ cluster }}/{{ mirror_registry.hostname }}.key

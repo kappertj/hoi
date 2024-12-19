@@ -1,9 +1,10 @@
+---
 install_version_major_minor: "{{ install_version | regex_replace('^([0-9]+\\.[0-9]+).*$', '\\1') }}"
 
 mirror_registry_version: 1.3.6
-mirror_registry_download_url: "https://developers.redhat.com/content-gateway/file/pub/openshift-v4/clients/mirror-registry/{{ mirror_registry_version }}/mirror-registry.tar.gz"
-mirror_registry_download_checksum: "https://developers.redhat.com/content-gateway/file/pub/openshift-v4/clients/mirror-registry/{{ mirror_registry_version }}/mirror-registry.tar.gz.sha256"
-mirror_registry_oc_plugin_url: "https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-{{ install_version_major_minor }}/oc-mirror.tar.gz"
+mirror_registry_download_url: https://developers.redhat.com/content-gateway/file/pub/openshift-v4/clients/mirror-registry/{{ mirror_registry_version }}/mirror-registry.tar.gz
+mirror_registry_download_checksum: https://developers.redhat.com/content-gateway/file/pub/openshift-v4/clients/mirror-registry/{{ mirror_registry_version }}/mirror-registry.tar.gz.sha256
+mirror_registry_oc_plugin_url: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-{{ install_version_major_minor }}/oc-mirror.tar.gz
 
 mirror_registry_install: false
 mirror_registry_download_dir: /opt/openshift_files/registry
@@ -11,19 +12,19 @@ mirror_registry_download_dir: /opt/openshift_files/registry
 #mirror_registry_cert:
 #  certfile: /opt/openshift_files/certs/{{ cluster }}/{{ mirror_registry.hostname }}.fullchain.pem
 #  keyfile: /opt/openshift_files/certs/{{ cluster }}/{{ mirror_registry.hostname }}.key
-  #cert_content:
-  #key_content
+#cert_content:
+#key_content
 
 #mirror_registry_pull_secret: /opt/openshift_files/pull-secret
 
 mirror_registry_platform_channels:
-- name: stable-4.13
-  type: ocp
-  full: 'false'
-  shortest_path: 'false'
+  - name: stable-4.13
+    type: ocp
+    full: "false"
+    shortest_path: "false"
 
 mirror_registry_additional_images:
-- registry.gitlab.com/wanderb/isitfriday:latest
+  - registry.gitlab.com/wanderb/isitfriday:latest
 
 mirror_registry:
   hostname: localhost
@@ -34,7 +35,5 @@ mirror_registry:
   password: redhat
   ssl: /opt/openshift_files/certs
   namespace: openshift4
-
-
 
 registry_installer_dir: /opt/openshift_files/registry

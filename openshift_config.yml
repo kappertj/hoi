@@ -1,8 +1,8 @@
 ---
 - name: Configure OpenShift 4.x
   hosts:
-  - "{{ bastion_host }}"
-  gather_facts: no
+    - "{{ bastion_host }}"
+  gather_facts: false
   become: true
   roles:
-  - openshift_config
+    - openshift_config

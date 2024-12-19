@@ -1,3 +1,4 @@
+---
 # Define your vcenters/datacenters here, only needed for VMWare installs
 vcenters:
   dcr1:

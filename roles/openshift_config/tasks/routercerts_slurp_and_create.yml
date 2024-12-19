@@ -1,20 +1,21 @@
+---
 - name: Slurp
-  slurp:
-    src: "{{ router.certfile }}"
   register: router_cert_cert
+  ansible.builtin.slurp:
+    src: "{{ router.certfile }}"
 
 - name: Slurp
-  slurp:
-    src: "{{ router.keyfile }}"
   register: router_cert_key
   when:
-  - not router.keyfile_is_vaultencrypted | default(false)
+    - not router.keyfile_is_vaultencrypted | default(false)
+  ansible.builtin.slurp:
+    src: "{{ router.keyfile }}"
 
 - name: Update router secrets
-  k8s:
+  loop: "{{ routercerts_certificates }}"
+  tags:
+    - routers
+  kubernetes.core.k8s:
     kubeconfig: "{{ openshift_kubeconfig }}"
     state: present
     definition: "{{ lookup('template', 'routercerts/router-certs.yml.j2') | from_yaml }}"
-  loop: "{{ routercerts_certificates }}"
-  tags:
-  - routers

@@ -1,50 +1,51 @@
+---
 # This uses the command module, unfortunately. Newer versions of ansible
 # support getting the modulus from the certificate public key using
 # x509_certificate_info, please migrate to that one and openssl_privatekey_info
 # (which already has modulus data) when it becomes available.
 
 - name: Get cert_modulus for '{{ cert_hostname }}'
-  shell: "openssl x509 -noout -modulus -in {{ certificate.certfile }} | sed 's/Modulus=//'"
   register: cert_modulus
   changed_when: false
+  ansible.builtin.shell: openssl x509 -noout -modulus -in {{ certificate.certfile }} | sed 's/Modulus=//'
 
 - name: Get key_modulus for '{{ cert_hostname }}'
-  openssl_privatekey_info:
-    path: "{{ certificate.keyfile }}"
   register: key_data
   changed_when: false
+  community.crypto.openssl_privatekey_info:
+    path: "{{ certificate.keyfile }}"
 
 - name: assert moduli of '{{ cert_hostname }}' are the same
-  assert:
-    that:
-    - cert_modulus.rc == 0
-    - key_data.public_data.modulus == cert_modulus.stdout | int(base=16)
-    fail_msg: "Private key does not match certificate"
-    success_msg: "Private key matches certificate"
   any_errors_fatal: true
+  ansible.builtin.assert:
+    that:
+      - cert_modulus.rc == 0
+      - key_data.public_data.modulus == cert_modulus.stdout | int(base=16)
+    fail_msg: Private key does not match certificate
+    success_msg: Private key matches certificate
 
 - name: check if certificate of '{{ cert_hostname }}' is expired or expires in less than {{ certificate_expiry_limit_days }} days
   openssl_certificate_info:
     path: "{{ certificate.certfile }}"
     valid_at:
-      point_1: "+{{ certificate_expiry_limit_days }}d"
+      point_1: +{{ certificate_expiry_limit_days }}d
   register: cert_data
   failed_when: false
   changed_when: false
 
 - name: assert certificate '{{ cert_hostname }}' expiry
-  assert:
-    that:
-    - cert_data.valid_at.point_1
-    fail_msg: "Certificate is expired or expires in less than {{ certificate_expiry_limit_days }} days"
-    success_msg: "Certificate is not expired and won't expire in less than {{ certificate_expiry_limit_days }} days"
   any_errors_fatal: true
+  ansible.builtin.assert:
+    that:
+      - cert_data.valid_at.point_1
+    fail_msg: Certificate is expired or expires in less than {{ certificate_expiry_limit_days }} days
+    success_msg: Certificate is not expired and won't expire in less than {{ certificate_expiry_limit_days }} days
 
 - name: assert certificate '{{ cert_hostname }}' hostname
-  assert:
-    that:
-    - cert_data.subject.commonName == '{{ cert_hostname }}'
-    - "'DNS:{{ cert_hostname }}' in cert_data.subject_alt_name"
-    fail_msg: "Certificate does NOT contain hostname '{{ cert_hostname }}'"
-    success_msg: "Certificate contains hostname '{{ cert_hostname }}'"
   any_errors_fatal: true
+  ansible.builtin.assert:
+    that:
+      - cert_data.subject.commonName == '{{ cert_hostname }}'
+      - "'DNS:{{ cert_hostname }}' in cert_data.subject_alt_name"
+    fail_msg: Certificate does NOT contain hostname '{{ cert_hostname }}'
+    success_msg: Certificate contains hostname '{{ cert_hostname }}'
