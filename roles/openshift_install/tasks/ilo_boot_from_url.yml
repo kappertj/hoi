@@ -172,15 +172,6 @@
     password: "{{ ilo_password }}"
 
 - name: Wait for reboot
-  uri:
-    method: GET
-    url: https://{{ ilo_address }}/redfish/v1/Systems/1
-    url_username: "{{ ilo_user }}"
-    url_password: "{{ ilo_password }}"
-    validate_certs: false
-    follow_redirects: "yes"
-    force_basic_auth: true
-    return_content: true
   environment:
     no_proxy: "{{ no_proxy['no_proxy'] }}"
   register: restart_server
@@ -189,9 +180,7 @@
     in ("InPostDiscoveryComplete","FinishedPost")
   retries: 30
   delay: 10
-
-- name: Look for boot entry URLFILE
-  uri:
+  ansible.builtin.uri:
     method: GET
     url: https://{{ ilo_address }}/redfish/v1/Systems/1
     url_username: "{{ ilo_user }}"
@@ -200,34 +189,43 @@
     follow_redirects: "yes"
     force_basic_auth: true
     return_content: true
+
+- name: Look for boot entry URLFILE
   environment:
     no_proxy: "{{ no_proxy['no_proxy'] }}"
   delegate_to: "{{ bastion_host }}"
   register: Boot
+  ansible.builtin.uri:
+    method: GET
+    url: https://{{ ilo_address }}/redfish/v1/Systems/1
+    url_username: "{{ ilo_user }}"
+    url_password: "{{ ilo_password }}"
+    validate_certs: false
+    follow_redirects: "yes"
+    force_basic_auth: true
+    return_content: true
 
-- set_fact:
-    URLFile: "{{ Boot.json.Boot.UefiTargetBootSourceOverrideSupported | select('match','File.URL.*') | list | first | default('NOTVALID') }}"
-  when:
+- when:
     - ilo_version == 4
+  ansible.builtin.set_fact:
+    URLFile: "{{ Boot.json.Boot.UefiTargetBootSourceOverrideSupported | select('match','File.URL.*') | list | first | default('NOTVALID') }}"
 
-- set_fact:
-    URLFile: "{{ Boot.json.Boot['UefiTargetBootSourceOverride@Redfish.AllowableValues'] | select('match','IPv4(0.0.0.0)*') | list | first | default('NOTVALID') }}"
-  when:
+- when:
     - ilo_version == 5
+  ansible.builtin.set_fact:
+    URLFile: "{{ Boot.json.Boot['UefiTargetBootSourceOverride@Redfish.AllowableValues'] | select('match','IPv4(0.0.0.0)*') | list | first | default('NOTVALID') }}"
 
-# During a CoreOS installation is URLFILE not in the list of supported method (replaced by RAMDisk.Emb.1.1)
-# A reboot fixes the list.
 - name: Reboot if URLFILE not found
-  redfish_command:
+  environment:
+    no_proxy: "{{ no_proxy['no_proxy'] }}"
+  delegate_to: "{{ bastion_host }}"
+  when: URLFile == 'NOTVALID'
+  community.general.redfish_command:
     category: Systems
     command: PowerForceRestart
     baseuri: "{{ ilo_address }}"
     username: "{{ ilo_user }}"
     password: "{{ ilo_password }}"
-  environment:
-    no_proxy: "{{ no_proxy['no_proxy'] }}"
-  delegate_to: "{{ bastion_host }}"
-  when: URLFile == 'NOTVALID'
 
 - name: Wait for reboot
   environment:
